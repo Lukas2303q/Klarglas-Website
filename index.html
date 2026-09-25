@@ -79,14 +79,18 @@
     </section>
 
     <section class="contact-section" id="kontakt">
-      <div class="contact-copy"><p class="eyebrow">Kontakt</p><h2>Bereit für einen<br><span>klaren Unterschied?</span></h2><p>Schicken Sie uns Ihre Anfrage. Je mehr Informationen Sie angeben, desto schneller können wir Ihnen weiterhelfen.</p><div class="contact-email"><span>E-Mail</span><a href="mailto:klarglas.berlin@gmail.com">klarglas.berlin@gmail.com</a></div></div>
-      <form class="contact-form" action="mailto:klarglas.berlin@gmail.com" method="post" enctype="text/plain">
+      <div class="contact-copy"><p class="eyebrow">Kontakt</p><h2>Bereit für einen<br><span>klaren Unterschied?</span></h2><p>Schicken Sie uns Ihre Anfrage. Je mehr Informationen Sie angeben, desto schneller können wir Ihnen weiterhelfen.</p><div class="contact-email"><span>E-Mail</span><a href="mailto:info@klarglas-berlin.de">info@klarglas-berlin.de</a></div></div>
+      <form class="contact-form" id="contactForm" action="https://formsubmit.co/ajax/info@klarglas-berlin.de" method="POST">
+        <input type="text" name="_honey" tabindex="-1" autocomplete="off" style="display:none">
+        <input type="hidden" name="_subject" value="Neue Anfrage über die Klarglas-Website">
+        <input type="hidden" name="_template" value="table">
+        <input type="hidden" name="_url" value="https://klarglas-berlin.de/">
         <label>Name<input name="Name" type="text" placeholder="Ihr Name" required></label>
-        <label>E-Mail<input name="E-Mail" type="email" placeholder="ihre@email.de" required></label>
+        <label>E-Mail<input name="email" type="email" placeholder="ihre@email.de" required></label>
         <label>Was soll gereinigt werden?<select name="Dienstleistung"><option>Fensterreinigung</option><option>Terrassenreinigung</option><option>Felgenreinigung</option><option>Sonstiges</option></select></label>
         <label>Nachricht<textarea name="Nachricht" rows="5" placeholder="Anzahl der Fenster, Adresse, Wunschzeitraum ..."></textarea></label>
         <button class="button button-primary" type="submit">Anfrage senden <span>↗</span></button>
-        <p class="form-note">Mit dem Absenden öffnet sich Ihr E-Mail-Programm.</p>
+        <p class="form-note" id="formStatus" role="status" aria-live="polite">Ihre Anfrage wird direkt an Klarglas gesendet.</p>
       </form>
     </section>
   </main>
