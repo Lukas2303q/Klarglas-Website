@@ -1,39 +1,57 @@
-// Kleine UX-Hilfe: externe/Anker-Links werden sanft behandelt; die Seite funktioniert auch ohne JavaScript.
-document.querySelectorAll('a[href^="#"]').forEach(link=>{link.addEventListener('click',()=>{document.body.classList.add('navigating');setTimeout(()=>document.body.classList.remove('navigating'),250)})});
+// Sanfte Navigation
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener('click', () => {
+    document.body.classList.add('navigating');
 
-// Kontaktformular: Anfrage direkt an Klarglas senden, ohne das E-Mail-Programm des Besuchers zu öffnen.
-const contactForm=document.getElementById('contactForm');
-const formStatus=document.getElementById('formStatus');
+    setTimeout(() => {
+      document.body.classList.remove('navigating');
+    }, 250);
+  });
+});
 
-if(contactForm&&formStatus){
-  contactForm.addEventListener('submit',async(event)=>{
+
+// Kontaktformular
+const form = document.querySelector('.contact-form');
+
+if (form) {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const button=contactForm.querySelector('button[type="submit"]');
-    const originalButtonText=button.innerHTML;
-    button.disabled=true;
-    button.innerHTML='Wird gesendet …';
-    formStatus.textContent='Ihre Anfrage wird gesendet …';
 
-    try{
-      const response=await fetch(contactForm.action,{
-        method:'POST',
-        headers:{'Accept':'application/json'},
-        body:new FormData(contactForm)
+    const button = form.querySelector('button[type="submit"]');
+    const originalButtonText = button.innerHTML;
+
+    button.disabled = true;
+    button.innerHTML = 'Wird gesendet …';
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+          'Accept': 'application/json'
+        }
       });
 
-      const data=await response.json().catch(()=>({}));
-
-      if(!response.ok||data.success===false){
-        throw new Error('Formular konnte nicht gesendet werden.');
+      if (!response.ok) {
+        throw new Error('Fehler beim Senden');
       }
 
-      contactForm.reset();
-      formStatus.textContent='Vielen Dank! Ihre Anfrage wurde erfolgreich gesendet.';
-    }catch(error){
-      formStatus.textContent='Das hat leider nicht funktioniert. Bitte schreiben Sie uns direkt an info@klarglas-berlin.de.';
-    }finally{
-      button.disabled=false;
-      button.innerHTML=originalButtonText;
+      form.reset();
+
+      button.innerHTML = '✓ Anfrage gesendet';
+
+      setTimeout(() => {
+        button.innerHTML = originalButtonText;
+        button.disabled = false;
+      }, 4000);
+
+    } catch (error) {
+      button.innerHTML = 'Fehler beim Senden';
+
+      setTimeout(() => {
+        button.innerHTML = originalButtonText;
+        button.disabled = false;
+      }, 4000);
     }
   });
 }
