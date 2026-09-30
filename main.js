@@ -174,7 +174,6 @@ const NUR_FENSTER = ["Fensterreinigung"];
 const OHNE_FENSTER = ["Felgenreinigung", "Nachbarschaftshilfe"];
 
 const WOCHENTAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-const MONATE = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 const datumLang = new Intl.DateTimeFormat("de-DE", { weekday: "long", day: "numeric", month: "long" });
 
 const datumAus = (iso) => {
@@ -189,31 +188,8 @@ const inTagen = (tage) => {
   d.setDate(d.getDate() + tage);
   return d;
 };
-const istWochenende = (d) => d.getDay() === 0 || d.getDay() === 6;
 const datumKurz = (d) => `${WOCHENTAGE[d.getDay()]} ${d.getDate()}.${d.getMonth() + 1}.`;
-const uhr = (minuten) => `${Math.floor(minuten / 60)}:${String(minuten % 60).padStart(2, "0")}`;
 const terminLesbar = (wert) => (wert ? datumLang.format(datumAus(wert)) : "");
-
-// Wann wir können: an Schultagen ab 15 Uhr, am Wochenende ab 9 Uhr, immer bis 20 Uhr
-const zeitrahmen = (iso) =>
-  iso && !istWochenende(datumAus(iso)) ? { von: 900, bis: 1200 } : { von: 540, bis: 1200 };
-
-const zeitfenster = (schluessel, iso) => {
-  const schultag = Boolean(iso) && !istWochenende(datumAus(iso));
-  return {
-    vormittag: { name: "Vormittag", von: 540, bis: 720, gesperrt: schultag },
-    nachmittag: { name: "Nachmittag", von: schultag ? 900 : 720, bis: 1020 },
-    abend: { name: "Abend", von: 1020, bis: 1200 },
-  }[schluessel];
-};
-
-const zeitText = (zeit, iso) => {
-  if (!zeit) return "";
-  if (zeit.art === "egal") return "Uhrzeit egal";
-  if (zeit.art === "genau") return `gegen ${uhr(zeit.minuten)} Uhr`;
-  const f = zeitfenster(zeit.schluessel, iso);
-  return `${f.name} (${f.von / 60}–${f.bis / 60} Uhr)`;
-};
 
 // Baut aus den Formularangaben die E-Mail, die bei uns im Postfach landet.
 const anfrageNachricht = (daten) => {
@@ -225,7 +201,7 @@ const anfrageNachricht = (daten) => {
   const schaetzung = normal * 4 + boden * 5;
   const tag = terminLesbar(daten.termin);
   const uhrzeit = daten.uhrzeit || "";
-  const termin = [tag, uhrzeit].filter(Boolean).join(", ");
+  const termin = [tag, uhrzeit].filter(Boolean).join(" ");
 
   let terminKurz = "";
   if (daten.termin) {
@@ -363,260 +339,6 @@ function fensterZaehler(form) {
   return { unterMindest, erstesFeld: zeilen[0].feld, hinweis };
 }
 
-/* Wunschtermin: Tag und Uhrzeit – am Computer Terminleiste und Sonnenbogen, auf dem Handy Knöpfe */
-function terminWahl(form) {
-  const box = form.querySelector("[data-termin]");
-  if (!box) return;
-
-  const tageBox = box.querySelector("[data-tage]");
-  const zeitenBox = box.querySelector("[data-zeiten]");
-  const anders = box.querySelector("[data-anderes]");
-  const andersDatum = box.querySelector("[data-anderes-datum]");
-  const terminFeld = box.querySelector("[data-termin-wert]");
-  const uhrzeitFeld = box.querySelector("[data-uhrzeit-wert]");
-  const bogen = box.querySelector("[data-sonnenbogen]");
-  const bahn = box.querySelector("[data-bogen]");
-  const regler = box.querySelector("[data-regler]");
-  const sonne = box.querySelector("[data-sonne]");
-  const anzeige = box.querySelector("[data-zeit-anzeige]");
-  const skalaStart = box.querySelector("[data-skala-start]");
-  const egal = box.querySelector("[data-zeit-egal]");
-  const gross = window.matchMedia("(min-width: 900px)");
-
-  const zustand = { datum: "", anders: false, zeit: null };
-  andersDatum.min = isoAus(inTagen(1));
-
-  const wahl = ({ name, wert, klasse = "", teile, label, gesperrt = false }) => {
-    const huelle = document.createElement("label");
-    huelle.className = `choice ${klasse}`.trim();
-    const input = document.createElement("input");
-    input.type = "radio";
-    input.name = name;
-    input.value = wert;
-    input.disabled = gesperrt;
-    if (label) input.setAttribute("aria-label", label);
-    huelle.append(input);
-    teile.forEach(([klassenname, text]) => {
-      const span = document.createElement("span");
-      span.className = klassenname;
-      span.textContent = text;
-      huelle.append(span);
-    });
-    return huelle;
-  };
-
-  const tageZeichnen = () => {
-    const optionen = [];
-    if (gross.matches) {
-      for (let i = 1; i <= 14; i += 1) {
-        const d = inTagen(i);
-        optionen.push(
-          wahl({
-            name: "tag_wahl",
-            wert: isoAus(d),
-            klasse: `choice--tag${i === 1 ? " is-morgen" : ""}`,
-            label: `${datumLang.format(d)}${i === 1 ? " (morgen)" : ""}`,
-            teile: [
-              ["choice__main", i === 1 ? "Morgen" : WOCHENTAGE[d.getDay()]],
-              ["choice__num", String(d.getDate())],
-              ["choice__sub", MONATE[d.getMonth()]],
-            ],
-          })
-        );
-      }
-      optionen.push(
-        wahl({
-          name: "tag_wahl",
-          wert: "anders",
-          klasse: "choice--tag choice--anders",
-          teile: [
-            ["choice__main", "Anderes"],
-            ["choice__sub", "Datum …"],
-          ],
-        })
-      );
-    } else {
-      const morgen = inTagen(1);
-      const uebermorgen = inTagen(2);
-      const wochenende = inTagen(3);
-      while (!istWochenende(wochenende)) wochenende.setDate(wochenende.getDate() + 1);
-      [
-        [morgen, "Morgen", " is-morgen"],
-        [uebermorgen, "Übermorgen", ""],
-        [wochenende, "Wochenende", ""],
-      ].forEach(([d, text, extra]) =>
-        optionen.push(
-          wahl({
-            name: "tag_wahl",
-            wert: isoAus(d),
-            klasse: extra.trim(),
-            label: `${text}, ${datumLang.format(d)}`,
-            teile: [
-              ["choice__main", text],
-              ["choice__sub", datumKurz(d)],
-            ],
-          })
-        )
-      );
-      optionen.push(
-        wahl({
-          name: "tag_wahl",
-          wert: "anders",
-          teile: [
-            ["choice__main", "Anderes Datum"],
-            ["choice__sub", "Kalender öffnen"],
-          ],
-        })
-      );
-    }
-    tageBox.replaceChildren(...optionen);
-
-    // Auswahl nach dem Umschalten Handy ↔ Computer beibehalten
-    const radios = [...tageBox.querySelectorAll("input")];
-    const treffer = !zustand.anders && radios.find((r) => r.value === zustand.datum);
-    if (zustand.datum && !treffer) {
-      zustand.anders = true;
-      andersDatum.value = zustand.datum;
-    }
-    const gewaehlt = zustand.anders ? radios.find((r) => r.value === "anders") : treffer;
-    if (gewaehlt) gewaehlt.checked = true;
-    anders.classList.toggle("is-offen", zustand.anders);
-  };
-
-  const zeitenZeichnen = () => {
-    const knoepfe = ["vormittag", "nachmittag", "abend"].map((schluessel) => {
-      const f = zeitfenster(schluessel, zustand.datum);
-      return wahl({
-        name: "zeit_wahl",
-        wert: schluessel,
-        gesperrt: Boolean(f.gesperrt),
-        label: `${f.name}, ${f.von / 60} bis ${f.bis / 60} Uhr${f.gesperrt ? ", an Schultagen nicht möglich" : ""}`,
-        teile: [
-          ["choice__main", f.name],
-          ["choice__sub", f.gesperrt ? "nur am Wochenende" : `${f.von / 60}–${f.bis / 60} Uhr`],
-        ],
-      });
-    });
-    knoepfe.push(
-      wahl({
-        name: "zeit_wahl",
-        wert: "egal",
-        teile: [
-          ["choice__main", "Egal"],
-          ["choice__sub", "Hauptsache sauber"],
-        ],
-      })
-    );
-    zeitenBox.replaceChildren(...knoepfe);
-
-    // Eine genaue Uhrzeit vom Sonnenbogen dem passenden Knopf zuordnen
-    let schluessel = zustand.zeit && (zustand.zeit.schluessel || zustand.zeit.art);
-    if (zustand.zeit && zustand.zeit.art === "genau") {
-      const m = zustand.zeit.minuten;
-      schluessel = m < 720 ? "vormittag" : m < 1020 ? "nachmittag" : "abend";
-    }
-    const radio = zeitenBox.querySelector(`input[value="${schluessel}"]`);
-    if (radio && !radio.disabled) radio.checked = true;
-    else if (zustand.zeit && zustand.zeit.art === "fenster") zustand.zeit = null;
-  };
-
-  // Die Sonne sitzt auf demselben Bogen wie im SVG (quadratische Kurve)
-  const sonneSetzen = () => {
-    const { von, bis } = zeitrahmen(zustand.datum);
-    const t = (Number(regler.value) - von) / (bis - von);
-    const x = ((8 + 384 * t) / 400) * bahn.clientWidth;
-    const y = (((1 - t) ** 2 * 112 + 2 * (1 - t) * t * -40 + t ** 2 * 112) / 120) * bahn.clientHeight;
-    sonne.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-  };
-
-  const anzeigen = () => {
-    const tag = terminLesbar(zustand.datum);
-    const zeit = zeitText(zustand.zeit, zustand.datum);
-    anzeige.textContent = zeit
-      ? [tag, zeit].filter(Boolean).join(" · ")
-      : `${tag ? `${tag} · ` : ""}Ziehen Sie die Sonne auf Ihre Wunschzeit.`;
-    regler.setAttribute("aria-valuetext", `${uhr(Number(regler.value))} Uhr`);
-    bogen.classList.toggle("is-egal", Boolean(zustand.zeit && zustand.zeit.art === "egal"));
-    egal.checked = Boolean(zustand.zeit && zustand.zeit.art === "egal");
-    terminFeld.value = zustand.datum;
-    uhrzeitFeld.value = zeit;
-  };
-
-  const rahmenAnpassen = () => {
-    const { von, bis } = zeitrahmen(zustand.datum);
-    regler.min = von;
-    regler.max = bis;
-    if (zustand.zeit && zustand.zeit.art === "fenster") {
-      const f = zeitfenster(zustand.zeit.schluessel, zustand.datum);
-      regler.value = Math.round((f.von + f.bis) / 60) * 30;
-    }
-    if (zustand.zeit && zustand.zeit.art === "genau") zustand.zeit.minuten = Number(regler.value);
-    skalaStart.textContent = `${von / 60} Uhr`;
-    zeitenZeichnen();
-    sonneSetzen();
-    anzeigen();
-  };
-
-  tageBox.addEventListener("change", (event) => {
-    if (event.target.value === "anders") {
-      zustand.anders = true;
-      zustand.datum = andersDatum.value;
-      anders.classList.add("is-offen");
-      try {
-        andersDatum.showPicker();
-      } catch {
-        /* ältere Browser: das Feld ist trotzdem sichtbar */
-      }
-    } else {
-      zustand.anders = false;
-      zustand.datum = event.target.value;
-      anders.classList.remove("is-offen");
-    }
-    rahmenAnpassen();
-  });
-
-  andersDatum.addEventListener("change", () => {
-    zustand.datum = andersDatum.value;
-    rahmenAnpassen();
-  });
-
-  zeitenBox.addEventListener("change", (event) => {
-    const wert = event.target.value;
-    zustand.zeit = wert === "egal" ? { art: "egal" } : { art: "fenster", schluessel: wert };
-    rahmenAnpassen();
-  });
-
-  regler.addEventListener("input", () => {
-    zustand.zeit = { art: "genau", minuten: Number(regler.value) };
-    sonneSetzen();
-    anzeigen();
-  });
-
-  egal.addEventListener("change", () => {
-    zustand.zeit = egal.checked ? { art: "egal" } : null;
-    anzeigen();
-  });
-
-  gross.addEventListener("change", () => {
-    tageZeichnen();
-    rahmenAnpassen();
-  });
-  if ("ResizeObserver" in window) new ResizeObserver(sonneSetzen).observe(bahn);
-
-  form.addEventListener("reset", () =>
-    setTimeout(() => {
-      Object.assign(zustand, { datum: "", anders: false, zeit: null });
-      andersDatum.value = "";
-      regler.value = 900;
-      tageZeichnen();
-      rahmenAnpassen();
-    })
-  );
-
-  tageZeichnen();
-  rahmenAnpassen();
-}
-
 const form = document.querySelector("[data-form]");
 
 if (form) {
@@ -627,7 +349,6 @@ if (form) {
   const absenden = form.querySelector("button[type='submit']");
   const felder = [...form.querySelectorAll(".field input, .field select, .field textarea")];
   const rechner = fensterZaehler(form);
-  terminWahl(form);
 
   const melden = (text, fehler = false) => {
     status.textContent = text;
@@ -680,9 +401,8 @@ if (form) {
     leisteAktualisieren();
   });
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
+  // Prüft alle Pflichtfelder und den Mindestauftrag. Gibt die Formulardaten zurück oder null.
+  const allesPruefen = () => {
     let erstesFehlerfeld = null;
     felder.forEach((feld) => {
       const ungueltig = !feld.checkValidity();
@@ -693,7 +413,7 @@ if (form) {
     if (erstesFehlerfeld) {
       erstesFehlerfeld.focus();
       melden("Bitte ergänzen Sie die markierten Felder.", true);
-      return;
+      return null;
     }
 
     const daten = Object.fromEntries(new FormData(form).entries());
@@ -702,8 +422,210 @@ if (form) {
     if (rechner && rechner.unterMindest() && NUR_FENSTER.includes(daten.leistung)) {
       rechner.erstesFeld.focus();
       melden("Der Mindestauftrag liegt bei 15 €. Nehmen Sie noch ein Fenster dazu.", true);
-      return;
+      return null;
     }
+    return daten;
+  };
+
+  /* Termin über Cal.com: Die Seite zeigt nur Zeiten, die im gemeinsamen Kalender frei sind,
+     und bucht beim Absenden direkt mit den Angaben aus dem Formular – kein zweites Formular.
+     Die Zeiten werden erst nach dem Tippen auf den Knopf von Cal.com geladen. */
+  const CAL = { api: "https://api.cal.com/v2", nutzer: "klarglas", termin: "fensterreinigung" };
+  const buchung = form.querySelector("[data-buchung]");
+  let gewaehlt = null; // { start: ISO-Zeit von Cal.com, lesbar: "Samstag, 4. Oktober um 9:00 Uhr" }
+
+  // Cal.com will Telefonnummern im internationalen Format: 0170 … wird zu +49170…
+  const telefonInternational = (roh) => {
+    let nummer = (roh || "").replace(/[^\d+]/g, "");
+    if (!nummer) return "";
+    if (nummer.startsWith("00")) nummer = `+${nummer.slice(2)}`;
+    else if (nummer.startsWith("0")) nummer = `+49${nummer.slice(1)}`;
+    else if (!nummer.startsWith("+")) nummer = `+49${nummer}`;
+    return nummer.length >= 8 ? nummer : "";
+  };
+
+  const uhrzeitAus = (d) => `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+  let zeitenNeuLaden = () => {};
+
+  if (buchung) {
+    const start = buchung.querySelector("[data-buchung-start]");
+    const text = buchung.querySelector("[data-buchung-text]");
+    const hinweis = buchung.querySelector("[data-buchung-hinweis]");
+    const slots = buchung.querySelector("[data-slots]");
+    const tageBox = buchung.querySelector("[data-slot-tage]");
+    const zeitenBox = buchung.querySelector("[data-slot-zeiten]");
+    const zeitLabel = buchung.querySelector("[data-slot-label]");
+    const leistung = form.querySelector("#leistung");
+    const textStandard = text.textContent;
+    let freieZeiten = {};
+
+    const knopf = (beschriftung, klasse = "") => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `slot ${klasse}`.trim();
+      b.textContent = beschriftung;
+      b.setAttribute("aria-pressed", "false");
+      return b;
+    };
+
+    const markieren = (box, aktiv) =>
+      box.querySelectorAll(".slot").forEach((b) => b.setAttribute("aria-pressed", String(b === aktiv)));
+
+    const absendenBeschriften = () => {
+      absenden.textContent = gewaehlt ? "Termin buchen und senden" : "Anfrage senden";
+    };
+
+    const zeitenZeigen = (tag, tagKnopf) => {
+      markieren(tageBox, tagKnopf);
+      gewaehlt = null;
+      absendenBeschriften();
+      zeitenBox.replaceChildren(
+        ...freieZeiten[tag].map(({ start: beginn }) => {
+          const zeit = new Date(beginn);
+          const b = knopf(uhrzeitAus(zeit));
+          b.setAttribute("aria-label", `${datumLang.format(zeit)} um ${uhrzeitAus(zeit)} Uhr`);
+          b.addEventListener("click", () => {
+            markieren(zeitenBox, b);
+            gewaehlt = { start: beginn, lesbar: `${datumLang.format(zeit)} um ${uhrzeitAus(zeit)} Uhr` };
+            absendenBeschriften();
+          });
+          return b;
+        })
+      );
+      zeitLabel.hidden = false;
+    };
+
+    const zeitenLaden = async () => {
+      const heute = new Date();
+      const bis = inTagen(15);
+      const url =
+        `${CAL.api}/slots?eventTypeSlug=${CAL.termin}&username=${CAL.nutzer}` +
+        `&start=${isoAus(heute)}&end=${isoAus(bis)}&timeZone=Europe/Berlin`;
+      tageBox.replaceChildren();
+      zeitenBox.replaceChildren();
+      zeitLabel.hidden = true;
+      gewaehlt = null;
+      absendenBeschriften();
+      slots.hidden = false;
+      const lade = document.createElement("p");
+      lade.className = "slots__leer";
+      lade.textContent = "Freie Termine werden geladen …";
+      tageBox.append(lade);
+
+      try {
+        const antwort = await fetch(url, { headers: { "cal-api-version": "2024-09-04" } });
+        if (!antwort.ok) throw new Error(`Status ${antwort.status}`);
+        freieZeiten = (await antwort.json()).data || {};
+      } catch {
+        lade.textContent =
+          "Die freien Termine konnten gerade nicht geladen werden. Senden Sie die Anfrage einfach ohne Termin, wir melden uns.";
+        return;
+      }
+
+      const tage = Object.keys(freieZeiten).filter((tag) => freieZeiten[tag].length).sort();
+      if (!tage.length) {
+        lade.textContent = "In den nächsten zwei Wochen ist leider alles belegt. Senden Sie die Anfrage ohne Termin, wir melden uns.";
+        return;
+      }
+      const morgen = isoAus(inTagen(1));
+      tageBox.replaceChildren(
+        ...tage.map((tag) => {
+          const d = datumAus(tag);
+          const b = knopf(tag === morgen ? `Morgen, ${datumKurz(d)}` : datumKurz(d), tag === morgen ? "is-morgen" : "");
+          b.setAttribute("aria-label", datumLang.format(d));
+          b.addEventListener("click", () => zeitenZeigen(tag, b));
+          return b;
+        })
+      );
+    };
+    zeitenNeuLaden = zeitenLaden;
+
+    start.addEventListener("click", () => {
+      if (start.getAttribute("aria-disabled") === "true") return;
+      start.hidden = true;
+      hinweis.hidden = true;
+      zeitenLaden();
+    });
+
+    // Felgen und Nachbarschaftshilfe stimmen wir per E-Mail ab – dort gibt es keine Terminwahl
+    const leistungPruefen = () => {
+      const aus = OHNE_FENSTER.includes(leistung.value);
+      buchung.classList.toggle("is-aus", aus);
+      start.setAttribute("aria-disabled", String(aus));
+      text.textContent = aus
+        ? "Für Felgen und Nachbarschaftshilfe stimmen wir den Termin per E-Mail mit Ihnen ab."
+        : textStandard;
+      if (aus) {
+        slots.hidden = true;
+        gewaehlt = null;
+        start.hidden = false;
+        hinweis.hidden = false;
+        absendenBeschriften();
+      }
+    };
+    leistung.addEventListener("change", leistungPruefen);
+    leistungPruefen();
+
+    form.addEventListener("reset", () =>
+      setTimeout(() => {
+        gewaehlt = null;
+        slots.hidden = true;
+        start.hidden = false;
+        hinweis.hidden = false;
+        absendenBeschriften();
+        leistungPruefen();
+      })
+    );
+  }
+
+  // Bucht den gewählten Termin bei Cal.com mit den Angaben aus dem Formular
+  const terminBuchen = async (daten) => {
+    const normal = Number(daten.fenster_normal) || 0;
+    const boden = Number(daten.fenster_bodentief) || 0;
+    const notiz = [
+      normal + boden ? `Fenster: ${normal} normale, ${boden} bodentiefe (ca. ${normal * 4 + boden * 5} €)` : "",
+      daten.telefon.trim() ? `Telefon: ${daten.telefon.trim()}` : "",
+      daten.nachricht.trim(),
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const telefon = telefonInternational(daten.telefon);
+
+    const antwort = await fetch(`${CAL.api}/bookings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "cal-api-version": "2024-08-13" },
+      body: JSON.stringify({
+        start: new Date(gewaehlt.start).toISOString(),
+        eventTypeSlug: CAL.termin,
+        username: CAL.nutzer,
+        attendee: {
+          name: daten.name.trim(),
+          email: daten.email.trim(),
+          timeZone: "Europe/Berlin",
+          language: "de",
+          ...(telefon ? { phoneNumber: telefon } : {}),
+        },
+        location: { type: "attendeeAddress", address: daten.adresse.trim() },
+        bookingFieldsResponses: {
+          title: normal + boden ? `Fensterreinigung (${normal + boden} Fenster)` : "Fensterreinigung",
+          notes: notiz,
+          ...(telefon ? { attendeePhoneNumber: telefon } : {}),
+        },
+      }),
+    });
+    const ergebnis = await antwort.json().catch(() => ({}));
+    if (!antwort.ok || ergebnis.status === "error") {
+      const grund = (ergebnis.error && ergebnis.error.message) || `Status ${antwort.status}`;
+      throw new Error(grund);
+    }
+  };
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const daten = allesPruefen();
+    if (!daten) return;
 
     // Honeypot: Menschen sehen das Feld nicht, Spam-Bots füllen es aus.
     if (daten._honey) {
@@ -712,8 +634,35 @@ if (form) {
       return;
     }
 
-    const nachricht = anfrageNachricht(daten);
     absenden.disabled = true;
+    absenden.textContent = gewaehlt ? "Termin wird gebucht …" : "Wird gesendet …";
+
+    // Erst den Termin fest buchen – ist er inzwischen weg, wird nichts gesendet
+    let terminGebucht = "";
+    if (gewaehlt) {
+      try {
+        await terminBuchen(daten);
+        terminGebucht = gewaehlt.lesbar;
+        daten.termin = isoAus(new Date(gewaehlt.start));
+        daten.uhrzeit = `um ${uhrzeitAus(new Date(gewaehlt.start))} Uhr (fest gebucht)`;
+        // Gebucht ist gebucht: ein zweiter Klick darf keinen zweiten Termin anlegen
+        gewaehlt = null;
+      } catch (fehler) {
+        absenden.disabled = false;
+        const telefonFehlt = /phone/i.test(fehler.message) && !daten.telefon.trim();
+        if (telefonFehlt) {
+          absenden.textContent = "Termin buchen und senden";
+          form.querySelector("#telefon").focus();
+          melden("Für die Terminbuchung brauchen wir Ihre Telefonnummer. Bitte tragen Sie sie oben ein.", true);
+        } else {
+          melden("Dieser Termin ist leider gerade weggegangen oder konnte nicht gebucht werden. Bitte wählen Sie einen anderen.", true);
+          zeitenNeuLaden();
+        }
+        return;
+      }
+    }
+
+    const nachricht = anfrageNachricht(daten);
     absenden.textContent = "Wird gesendet …";
 
     const abbruch = new AbortController();
@@ -732,8 +681,20 @@ if (form) {
       }
 
       form.reset();
-      melden("Danke, Ihre Anfrage ist angekommen. Wir melden uns in etwa 15 Minuten.");
+      melden(
+        terminGebucht
+          ? `Danke! Ihr Termin am ${terminGebucht} steht. Die Bestätigung kommt per E-Mail.`
+          : "Danke, Ihre Anfrage ist angekommen. Wir melden uns in etwa 15 Minuten."
+      );
     } catch (fehler) {
+      // Termin steht schon, und alle Angaben liegen in den Notizen der Cal.com-Buchung.
+      // Scheitert nur die Zusatz-Mail an uns, bekommt der Kunde trotzdem eine normale Bestätigung.
+      if (terminGebucht) {
+        console.warn("Zusatz-Mail über FormSubmit nicht gesendet:", fehler.message);
+        form.reset();
+        melden(`Danke! Ihr Termin am ${terminGebucht} steht. Die Bestätigung kommt per E-Mail.`);
+        return;
+      }
       // Lesbarer Grund, damit man beim Einrichten sofort sieht, woran es hängt
       const grund = /activat/i.test(fehler.message)
         ? " Das Formular ist noch nicht freigeschaltet."
@@ -748,7 +709,7 @@ if (form) {
     } finally {
       clearTimeout(zeitlimit);
       absenden.disabled = false;
-      absenden.textContent = "Anfrage senden";
+      absenden.textContent = gewaehlt && !terminGebucht ? "Termin buchen und senden" : "Anfrage senden";
     }
   });
 }

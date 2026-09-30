@@ -1601,265 +1601,97 @@ button,
   }
 }
 
-/* ---------- Formular: Wunschtermin ---------- */
+/* ---------- Formular: Termin über Cal.com ---------- */
 
-.when__days,
-.when__times {
+.booking__text {
   clear: both;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.booking__start {
+  justify-self: start;
+}
+
+.booking__hinweis {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+.slots {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.slots__tage,
+.slots__zeiten {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
-.choice {
-  position: relative;
-  display: grid;
-  align-content: center;
-  gap: 0.1rem;
-  min-height: 56px;
-  padding: 0.6rem 0.9rem;
-  background: var(--white);
+.slots__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.slot {
+  min-height: 44px;
+  padding: 0.55rem 0.95rem;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 12px;
+  background: var(--white);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--navy);
   cursor: pointer;
   transition: transform var(--dur-press) var(--ease-out),
     background-color var(--dur-hover) ease, border-color var(--dur-hover) ease,
     color var(--dur-hover) ease;
 }
 
-.choice input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.choice__main {
-  font-weight: 600;
-  font-size: 0.9375rem;
-  line-height: 1.25;
-}
-
-.choice__sub {
-  font-size: 0.8125rem;
-  line-height: 1.3;
-  color: var(--ink-3);
-}
-
-.choice:active {
-  transform: scale(0.97);
-}
-
-.choice.is-morgen {
+.slot.is-morgen {
   border-color: var(--accent);
-}
-
-.choice.is-morgen .choice__main {
   color: var(--accent);
 }
 
-.choice:has(input:checked) {
+.slot[aria-pressed="true"] {
   background: var(--navy);
   border-color: var(--navy);
   color: var(--cream);
 }
 
-.choice:has(input:checked) .choice__main {
-  color: var(--cream);
+.slot:active {
+  transform: scale(0.97);
 }
 
-.choice:has(input:checked) .choice__sub {
-  color: rgba(255, 254, 252, 0.72);
-}
-
-.choice:has(input:focus-visible) {
+.slot:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
 
-.choice:has(input:disabled) {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.when__caption {
-  margin-top: 0.35rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--ink-2);
-}
-
-html:not(.js) .when__caption {
-  display: none;
-}
-
-.when__other {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.js .when__other:not(.is-offen) {
-  display: none;
-}
-
-.when__other-label {
-  font-size: 0.875rem;
-  color: var(--ink-2);
-}
-
-.when__date {
-  width: 100%;
-  min-height: 52px;
-  padding: 0.85rem 1.1rem;
-  font: inherit;
-  font-size: max(16px, 1rem);
-  color: var(--navy);
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-}
-
-.when__date:focus-visible {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
-  border-color: var(--accent);
-}
-
-/* Sonnenbogen: nur am Computer, auf dem Handy gibt es Knöpfe */
-.sunarc {
-  display: none;
-}
-
-html:not(.js) .when__days,
-html:not(.js) .when__times {
-  display: none;
-}
-
-.sunarc__readout {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  min-height: 1.6em;
-  max-width: none;
-}
-
-.sunarc__track {
-  position: relative;
-  height: 104px;
-  margin-top: 0.25rem;
-}
-
-.sunarc__sky {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-/* Der echte Regler liegt unsichtbar über dem Bogen: Maus, Finger und Tastatur
-   bedienen ihn ganz normal, sichtbar ist nur die Sonne */
-.sunarc__range {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: grab;
-}
-
-.sunarc__range:active {
-  cursor: grabbing;
-}
-
-.sunarc__sun {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 34px;
-  height: 34px;
-  margin: -17px 0 0 -17px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff4cc, #ffcb52 58%, #f4a21f);
-  box-shadow: 0 0 0 7px rgba(255, 203, 82, 0.22), 0 8px 20px -8px rgba(244, 162, 31, 0.9);
-  pointer-events: none;
-  transition: opacity var(--dur-hover) ease, filter var(--dur-hover) ease;
-}
-
-.sunarc__range:focus-visible ~ .sunarc__sun {
-  outline: 3px solid var(--accent);
-  outline-offset: 4px;
-}
-
-.sunarc.is-egal .sunarc__sun {
-  opacity: 0.35;
-  filter: grayscale(1);
-}
-
-.sunarc.is-egal .sunarc__readout,
-.sunarc.is-egal .sunarc__sky {
-  opacity: 0.5;
-}
-
-.sunarc__scale {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8125rem;
-  color: var(--ink-3);
-}
-
-.toggle {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-self: start;
-  gap: 0.65rem;
-  min-height: 44px;
+.slots__leer {
   font-size: 0.9375rem;
-  cursor: pointer;
+  color: var(--ink-2);
 }
 
-.toggle input {
-  position: absolute;
-  opacity: 0;
-  width: 1px;
-  height: 1px;
+.booking [hidden] {
+  display: none;
 }
 
-.toggle__track {
-  position: relative;
-  flex: none;
-  width: 44px;
-  height: 26px;
-  border-radius: var(--pill);
-  background: var(--border);
-  transition: background-color var(--dur-hover) ease;
+.booking__ok {
+  padding: 0.9rem 1.1rem;
+  border-radius: 14px;
+  background: var(--accent-wash);
+  font-weight: 600;
 }
 
-.toggle__track::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--white);
-  box-shadow: 0 1px 3px rgba(1, 15, 43, 0.3);
-  transition: transform var(--dur-ui) var(--ease-out);
-}
-
-.toggle input:checked + .toggle__track {
-  background: var(--accent);
-}
-
-.toggle input:checked + .toggle__track::after {
-  transform: translateX(18px);
-}
-
-.toggle input:focus-visible + .toggle__track {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
+.booking.is-aus .booking__start {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 @media (min-width: 900px) {
@@ -1899,57 +1731,6 @@ html:not(.js) .when__times {
 
   .estimate__warn {
     color: #ffb8b8;
-  }
-
-  /* Terminleiste: die nächsten 14 Tage zum Durchwischen */
-  .when__days {
-    display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x proximity;
-    padding: 4px 4px 10px;
-    margin: -4px -4px 0;
-    scrollbar-width: thin;
-  }
-
-  .choice--tag {
-    flex: none;
-    width: 4.6rem;
-    min-height: 86px;
-    justify-items: center;
-    text-align: center;
-    scroll-snap-align: start;
-    padding-inline: 0.4rem;
-  }
-
-  .choice--tag .choice__num {
-    font-size: 1.5rem;
-    font-weight: 700;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .choice--tag .choice__main {
-    font-size: 0.8125rem;
-  }
-
-  .choice--anders {
-    width: 7rem;
-  }
-
-  .when__times,
-  .when__caption {
-    display: none;
-  }
-
-  .sunarc {
-    display: grid;
-    gap: 0.4rem;
-    padding: 1rem 1.2rem 0.6rem;
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 18px;
   }
 }
 
@@ -2187,13 +1968,13 @@ html:not(.js) .when__times {
 /* ---------- Zeigergeräte: Hover nur dort, wo es Hover wirklich gibt ---------- */
 
 @media (hover: hover) and (pointer: fine) {
+  .slot:not([aria-pressed="true"]):hover {
+    border-color: var(--ink-3);
+  }
+
   .stepper__btn:not([aria-disabled="true"]):hover {
     border-color: var(--navy);
     background: var(--white);
-  }
-
-  .choice:not(:has(input:checked)):not(:has(input:disabled)):hover {
-    border-color: var(--ink-3);
   }
 
   .btn--primary:hover {
@@ -2486,13 +2267,9 @@ html:not(.js) .when__times {
   .menu-close:active,
   .masthead__brand:active,
   .stepper__btn:active,
-  .choice:active {
+  .slot:active {
     transform: none;
     opacity: 0.8;
-  }
-
-  .toggle__track::after {
-    transition: none;
   }
 
   /* Die Kopfzeile wechselt ihre Größe ohne Bewegung */

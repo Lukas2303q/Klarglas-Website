@@ -12,7 +12,7 @@
       content="Anfrage an Klar Glas: Fensterreinigung, Terrassentüren und Felgen in Berlin-Köpenick. 4 € pro Fenster, Bestätigung in 15 Minuten. Heute schreiben, morgen da."
     />
     <meta name="theme-color" content="#fffefc" />
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="preload" href="figtree-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="styles.css" />
     <script>
@@ -179,46 +179,25 @@
               </div>
             </fieldset>
 
-            <fieldset class="group when" data-termin>
-              <legend class="group__legend">Wunschtermin <span class="field__hint">(optional)</span></legend>
+            <fieldset class="group booking" data-buchung>
+              <legend class="group__legend">Termin <span class="field__hint">(optional)</span></legend>
               <input type="hidden" name="termin" data-termin-wert />
               <input type="hidden" name="uhrzeit" data-uhrzeit-wert />
-
-              <div class="when__days" data-tage role="radiogroup" aria-label="Tag"></div>
-              <div class="when__other" data-anderes>
-                <label class="when__other-label" for="termin-anders">Datum wählen</label>
-                <input class="when__date" id="termin-anders" name="termin_datum" type="date" data-anderes-datum />
+              <p class="booking__text" data-buchung-text>
+                Buchen Sie direkt einen freien Termin. Sie sehen nur Zeiten, an denen wir wirklich können.
+              </p>
+              <button class="btn btn--ghost booking__start" type="button" data-buchung-start>
+                Freie Termine anzeigen
+              </button>
+              <p class="booking__hinweis" data-buchung-hinweis>
+                Die freien Zeiten kommen von Cal.com und werden erst geladen, wenn Sie auf den Knopf tippen.
+              </p>
+              <div class="slots" data-slots hidden>
+                <div class="slots__tage" data-slot-tage role="group" aria-label="Freie Tage"></div>
+                <p class="slots__label" data-slot-label hidden>Freie Uhrzeiten</p>
+                <div class="slots__zeiten" data-slot-zeiten role="group" aria-label="Freie Uhrzeiten"></div>
               </div>
-
-              <div class="sunarc" data-sonnenbogen>
-                <p class="sunarc__readout" data-zeit-anzeige aria-hidden="true">
-                  Ziehen Sie die Sonne auf Ihre Wunschzeit.
-                </p>
-                <div class="sunarc__track" data-bogen>
-                  <svg class="sunarc__sky" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
-                    <defs>
-                      <linearGradient id="himmel" x1="0" x2="1" y1="0" y2="0">
-                        <stop offset="0" stop-color="#ffd27a" />
-                        <stop offset="0.5" stop-color="#9db6ff" />
-                        <stop offset="1" stop-color="#2b5cff" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M8 112 Q200 -40 392 112" fill="none" stroke="url(#himmel)" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 10" />
-                    <path d="M0 116 H400" stroke="#010f2b" stroke-opacity="0.14" stroke-width="2" />
-                  </svg>
-                  <input class="sunarc__range" id="uhrzeit-regler" type="range" min="540" max="1200" step="30" value="900" aria-label="Uhrzeit" data-regler />
-                  <span class="sunarc__sun" data-sonne aria-hidden="true"></span>
-                </div>
-                <div class="sunarc__scale" aria-hidden="true"><span data-skala-start>9 Uhr</span><span>20 Uhr</span></div>
-                <label class="toggle">
-                  <input type="checkbox" data-zeit-egal />
-                  <span class="toggle__track" aria-hidden="true"></span>
-                  Uhrzeit ist mir egal
-                </label>
-              </div>
-
-              <p class="when__caption" aria-hidden="true">Uhrzeit</p>
-              <div class="when__times" data-zeiten role="radiogroup" aria-label="Uhrzeit"></div>
+              <p class="booking__ok" data-buchung-ok role="status" hidden></p>
             </fieldset>
 
             <div class="field">
