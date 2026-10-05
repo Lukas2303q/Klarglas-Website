@@ -2328,3 +2328,29 @@ button,
     transform: none;
   }
 }
+
+/* ---------- Hervorgehobene Hauptleistung ---------- */
+.lineup__row--featured {
+  background: var(--accent-wash);
+  border: 1px solid rgba(43, 92, 255, 0.16);
+  border-radius: var(--r-media);
+  padding: clamp(1rem, 2vw, 1.5rem);
+  margin-inline: calc(clamp(1rem, 2vw, 1.5rem) * -1);
+  box-shadow: 0 16px 36px -28px rgba(1, 15, 43, 0.35);
+}
+
+.lineup__row--featured .lineup__title {
+  font-weight: 700;
+}
+
+.lineup__row--featured .lineup__price {
+  font-weight: 700;
+  color: var(--accent-deep);
+}
+
+@media (max-width: 600px) {
+  .lineup__row--featured {
+    margin-inline: -0.5rem;
+    padding: 1rem;
+  }
+}
