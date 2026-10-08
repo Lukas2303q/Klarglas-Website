@@ -198,7 +198,7 @@ const anfrageNachricht = (daten) => {
   const nachricht = daten.nachricht.trim();
   const normal = Number(daten.fenster_normal) || 0;
   const boden = Number(daten.fenster_bodentief) || 0;
-  const schaetzung = normal * 4 + boden * 5;
+  const schaetzung = normal * 5 + boden * 10;
   const tag = terminLesbar(daten.termin);
   const uhrzeit = daten.uhrzeit || "";
   const termin = [tag, uhrzeit].filter(Boolean).join(" ");
@@ -584,7 +584,7 @@ if (form) {
     const normal = Number(daten.fenster_normal) || 0;
     const boden = Number(daten.fenster_bodentief) || 0;
     const notiz = [
-      normal + boden ? `Fenster: ${normal} normale, ${boden} bodentiefe (ca. ${normal * 4 + boden * 5} €)` : "",
+      normal + boden ? `Fenster: ${normal} normale, ${boden} bodentiefe (ca. ${normal * 5 + boden * 10} €)` : "",
       daten.telefon.trim() ? `Telefon: ${daten.telefon.trim()}` : "",
       daten.nachricht.trim(),
     ]
