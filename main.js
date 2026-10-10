@@ -167,7 +167,7 @@ if (actionbar && hero) {
 
 /* ---------- Formular ---------- */
 
-const PREIS_MINDEST = 25;
+const PREIS_MINDEST = 15;
 // Bei diesen Leistungen geht es nur um Fenster – dort gilt der Mindestauftrag
 const NUR_FENSTER = ["Fensterreinigung"];
 // Bei diesen Leistungen spielen Fenster keine Rolle – der Zähler wird ausgegraut
@@ -198,7 +198,7 @@ const anfrageNachricht = (daten) => {
   const nachricht = daten.nachricht.trim();
   const normal = Number(daten.fenster_normal) || 0;
   const boden = Number(daten.fenster_bodentief) || 0;
-  const schaetzung = normal * 5 + boden * 10;
+  const schaetzung = normal * 4 + boden * 5;
   const tag = terminLesbar(daten.termin);
   const uhrzeit = daten.uhrzeit || "";
   const termin = [tag, uhrzeit].filter(Boolean).join(" ");
@@ -418,10 +418,10 @@ if (form) {
 
     const daten = Object.fromEntries(new FormData(form).entries());
 
-    // Mindestauftrag: Nur Fenster und unter 25 € – dann lohnt sich der Weg nicht
+    // Mindestauftrag: Nur Fenster und unter 15 € – dann lohnt sich der Weg nicht
     if (rechner && rechner.unterMindest() && NUR_FENSTER.includes(daten.leistung)) {
       rechner.erstesFeld.focus();
-      melden("Der Mindestauftrag liegt bei 25 €. Ergänzen Sie Fenster, bis die Schätzung mindestens 25 € beträgt.", true);
+      melden("Der Mindestauftrag liegt bei 15 €. Nehmen Sie noch ein Fenster dazu.", true);
       return null;
     }
     return daten;
@@ -584,7 +584,7 @@ if (form) {
     const normal = Number(daten.fenster_normal) || 0;
     const boden = Number(daten.fenster_bodentief) || 0;
     const notiz = [
-      normal + boden ? `Fenster: ${normal} normale, ${boden} bodentiefe (ca. ${normal * 5 + boden * 10} €)` : "",
+      normal + boden ? `Fenster: ${normal} normale, ${boden} bodentiefe (ca. ${normal * 4 + boden * 5} €)` : "",
       daten.telefon.trim() ? `Telefon: ${daten.telefon.trim()}` : "",
       daten.nachricht.trim(),
     ]
