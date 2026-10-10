@@ -167,7 +167,10 @@ if (actionbar && hero) {
 
 /* ---------- Formular ---------- */
 
-const PREIS_MINDEST = 15;
+const PREIS_MINDEST = 25;
+// Gleiche Mengen und Preise für Anzeige, E-Mail und Terminnotizen.
+const fensterAnzahl = (wert) => Math.min(99, Math.max(0, parseInt(wert, 10) || 0));
+const fensterPreis = (normal, boden) => fensterAnzahl(normal) * 5 + fensterAnzahl(boden) * 10;
 // Bei diesen Leistungen geht es nur um Fenster – dort gilt der Mindestauftrag
 const NUR_FENSTER = ["Fensterreinigung"];
 // Bei diesen Leistungen spielen Fenster keine Rolle – der Zähler wird ausgegraut
@@ -196,9 +199,9 @@ const anfrageNachricht = (daten) => {
   const name = daten.name.trim();
   const telefon = daten.telefon.trim();
   const nachricht = daten.nachricht.trim();
-  const normal = Number(daten.fenster_normal) || 0;
-  const boden = Number(daten.fenster_bodentief) || 0;
-  const schaetzung = normal * 4 + boden * 5;
+  const normal = fensterAnzahl(daten.fenster_normal);
+  const boden = fensterAnzahl(daten.fenster_bodentief);
+  const schaetzung = fensterPreis(normal, boden);
   const tag = terminLesbar(daten.termin);
   const uhrzeit = daten.uhrzeit || "";
   const termin = [tag, uhrzeit].filter(Boolean).join(" ");
@@ -260,7 +263,7 @@ function fensterZaehler(form) {
   let angezeigt = 0;
   let takt = 0;
 
-  const anzahl = (feld) => Math.min(99, Math.max(0, parseInt(feld.value, 10) || 0));
+  const anzahl = (feld) => fensterAnzahl(feld.value);
   const summe = () => zeilen.reduce((s, z) => s + anzahl(z.feld) * z.preis, 0);
   const unterMindest = () => summe() > 0 && summe() < PREIS_MINDEST;
 
@@ -294,7 +297,10 @@ function fensterZaehler(form) {
     summeZeile.hidden = s === 0;
     zeigen(s);
 
-    const warnen = unterMindest();
+    const warnen = !box.disabled && unterMindest();
+    hinweis.textContent = leistung && leistung.value === "Mehreres zusammen"
+      ? `Die Fenster allein liegen unter ${PREIS_MINDEST} €. Den Gesamtpreis für die kombinierten Leistungen bestätigen wir per E-Mail.`
+      : `Der Mindestauftrag liegt bei ${PREIS_MINDEST} €. Ergänzen Sie Fenster, bis die Schätzung mindestens ${PREIS_MINDEST} € beträgt.`;
     hinweis.hidden = !warnen;
     zeilen.forEach((z) => {
       if (warnen) z.feld.setAttribute("aria-describedby", hinweis.id);
@@ -323,7 +329,7 @@ function fensterZaehler(form) {
     const aus = OHNE_FENSTER.includes(leistung.value);
     box.disabled = aus;
     box.classList.toggle("is-aus", aus);
-    hinweis.hidden = aus || !unterMindest();
+    aktualisieren();
   };
   if (leistung) leistung.addEventListener("change", leistungPruefen);
 
@@ -336,7 +342,11 @@ function fensterZaehler(form) {
   aktualisieren();
   leistungPruefen();
 
-  return { unterMindest, erstesFeld: zeilen[0].feld, hinweis };
+  const normalisieren = () => {
+    zeilen.forEach((z) => { z.feld.value = anzahl(z.feld); });
+    aktualisieren();
+  };
+  return { unterMindest, normalisieren, erstesFeld: zeilen[0].feld, hinweis };
 }
 
 const form = document.querySelector("[data-form]");
@@ -416,12 +426,13 @@ if (form) {
       return null;
     }
 
+    if (rechner) rechner.normalisieren();
     const daten = Object.fromEntries(new FormData(form).entries());
 
-    // Mindestauftrag: Nur Fenster und unter 15 € – dann lohnt sich der Weg nicht
+    // Mindestauftrag: Nur Fenster und unter 25 € – dann lohnt sich der Weg nicht
     if (rechner && rechner.unterMindest() && NUR_FENSTER.includes(daten.leistung)) {
       rechner.erstesFeld.focus();
-      melden("Der Mindestauftrag liegt bei 15 €. Nehmen Sie noch ein Fenster dazu.", true);
+      melden(`Der Mindestauftrag liegt bei ${PREIS_MINDEST} €. Ergänzen Sie Fenster, bis die Schätzung mindestens ${PREIS_MINDEST} € beträgt.`, true);
       return null;
     }
     return daten;
@@ -581,10 +592,10 @@ if (form) {
 
   // Bucht den gewählten Termin bei Cal.com mit den Angaben aus dem Formular
   const terminBuchen = async (daten) => {
-    const normal = Number(daten.fenster_normal) || 0;
-    const boden = Number(daten.fenster_bodentief) || 0;
+    const normal = fensterAnzahl(daten.fenster_normal);
+    const boden = fensterAnzahl(daten.fenster_bodentief);
     const notiz = [
-      normal + boden ? `Fenster: ${normal} normale, ${boden} bodentiefe (ca. ${normal * 4 + boden * 5} €)` : "",
+      normal + boden ? `Fenster: ${normal} normale, ${boden} bodentiefe (ca. ${fensterPreis(normal, boden)} €)` : "",
       daten.telefon.trim() ? `Telefon: ${daten.telefon.trim()}` : "",
       daten.nachricht.trim(),
     ]
