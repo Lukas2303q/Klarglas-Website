@@ -1,8 +1,4 @@
 const KONTAKT_MAIL = "info@klarglas-berlin.de";
-// FormSubmit leitet die Anfrage als E-Mail an diese Adresse weiter.
-// Nach der Aktivierung kann die Adresse hier durch den geheimen Code von FormSubmit
-// ersetzt werden, dann steht sie nicht mehr im Quelltext.
-const FORMULAR_ZIEL = `https://formsubmit.co/ajax/${KONTAKT_MAIL}`;
 
 const root = document.documentElement;
 const reduziert = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -238,10 +234,7 @@ const anfrageNachricht = (daten) => {
     Schätzung: normal + boden ? `${schaetzung} €` : "–",
     Wunschtermin: termin || "–",
     Nachricht: nachricht || "–",
-    _subject: `Neue Anfrage: ${daten.leistung} – ${name}${terminKurz ? ` (${terminKurz})` : ""}`,
-    _replyto: daten.email,
-    _template: "table",
-    _captcha: "false",
+    Betreff: `Neue Anfrage: ${daten.leistung} – ${name}${terminKurz ? ` (${terminKurz})` : ""}`,
   };
 };
 
@@ -352,7 +345,7 @@ function fensterZaehler(form) {
 const form = document.querySelector("[data-form]");
 
 if (form) {
-  // Ohne JavaScript prüft der Browser selbst und schickt das Formular direkt an FormSubmit.
+  // Absenden wird nach dem Binden der Formularbehandlung freigeschaltet.
   form.setAttribute("novalidate", "");
 
   const status = form.querySelector("[data-form-status]");
@@ -366,12 +359,12 @@ if (form) {
     status.classList.toggle("is-error", fehler);
   };
 
-  // Notlösung, falls der Versand scheitert: die fertige Nachricht im E-Mail-Programm öffnen
+  // Vorhandene direkte E-Mail-Ausweichmöglichkeit für Anfragen ohne Buchung.
   const perMailAnbieten = (nachricht) => {
     const link = document.createElement("a");
     link.className = "btn btn--ghost form__mail";
     link.href = `mailto:${KONTAKT_MAIL}?subject=${encodeURIComponent(
-      nachricht._subject
+      nachricht.Betreff
     )}&body=${encodeURIComponent(nachricht.Anfrage)}`;
     link.textContent = "Per E-Mail senden";
     status.append(" ", link);
@@ -673,56 +666,17 @@ if (form) {
       }
     }
 
-    const nachricht = anfrageNachricht(daten);
-    absenden.textContent = "Wird gesendet …";
-
-    const abbruch = new AbortController();
-    const zeitlimit = setTimeout(() => abbruch.abort(), 15000);
-
-    try {
-      const antwort = await fetch(FORMULAR_ZIEL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(nachricht),
-        signal: abbruch.signal,
-      });
-      const ergebnis = await antwort.json().catch(() => ({}));
-      if (!antwort.ok || String(ergebnis.success) !== "true") {
-        throw new Error(ergebnis.message || `Status ${antwort.status}`);
-      }
-
+    if (terminGebucht) {
       form.reset();
-      melden(
-        terminGebucht
-          ? `Danke! Ihr Termin am ${terminGebucht} steht. Die Bestätigung kommt per E-Mail.`
-          : "Danke, Ihre Anfrage ist angekommen. Wir melden uns in etwa 15 Minuten."
-      );
-    } catch (fehler) {
-      // Termin steht schon, und alle Angaben liegen in den Notizen der Cal.com-Buchung.
-      // Scheitert nur die Zusatz-Mail an uns, bekommt der Kunde trotzdem eine normale Bestätigung.
-      if (terminGebucht) {
-        console.warn("Zusatz-Mail über FormSubmit nicht gesendet:", fehler.message);
-        form.reset();
-        melden(`Danke! Ihr Termin am ${terminGebucht} steht. Die Bestätigung kommt per E-Mail.`);
-        return;
-      }
-      // Lesbarer Grund, damit man beim Einrichten sofort sieht, woran es hängt
-      const grund = /activat/i.test(fehler.message)
-        ? " Das Formular ist noch nicht freigeschaltet."
-        : /klarglas-berlin\.de$|^localhost$|^127\./.test(window.location.hostname)
-          ? ""
-          : " In dieser Testversion kann nicht echt gesendet werden.";
-      melden(
-        `Das Senden hat gerade nicht geklappt.${grund} Schicken Sie die Anfrage per E-Mail oder rufen Sie an: 0159 0660 2809.`,
-        true
-      );
-      perMailAnbieten(nachricht);
-    } finally {
-      clearTimeout(zeitlimit);
-      absenden.disabled = false;
-      absenden.textContent = gewaehlt && !terminGebucht ? "Termin buchen und senden" : "Anfrage senden";
+      melden(`Danke! Ihr Termin am ${terminGebucht} steht. Die Bestätigung kommt per E-Mail.`);
+    } else {
+      melden("Ohne Termin können Sie uns Ihre Anfrage direkt per E-Mail senden.");
+      perMailAnbieten(anfrageNachricht(daten));
     }
+    absenden.disabled = false;
+    absenden.textContent = gewaehlt && !terminGebucht ? "Termin buchen und senden" : "Anfrage senden";
   });
+  absenden.disabled = false;
 }
 
 /* ========== Bewegung: GSAP + ScrollTrigger + Lenis ========== */
