@@ -1,4 +1,6 @@
 const KONTAKT_MAIL = "info@klarglas-berlin.de";
+// Öffentliche Supabase-Anbindung für Anfragen und verfügbare Termine.
+const INTERN = { url: "https://iwkklvjfftrjembrgnwv.supabase.co", schluessel: "sb_publishable_rSlCwQ_qWRGCEGLMfKkwzA_RrOjl5xG" };
 
 const root = document.documentElement;
 const reduziert = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -342,6 +344,41 @@ function fensterZaehler(form) {
   return { unterMindest, normalisieren, erstesFeld: zeilen[0].feld, hinweis };
 }
 
+// Pro Absenden genau eine Anfrage; Erfolg erst nach Bestätigung durch Supabase.
+async function ansDashboard(daten) {
+  if (!INTERN.url || !INTERN.schluessel) throw new Error("Anbindung fehlt");
+  const abbruch = new AbortController();
+  const zeitlimit = setTimeout(() => abbruch.abort(), 15000);
+  try {
+    const antwort = await fetch(`${INTERN.url}/rest/v1/anfragen`, {
+      method: "POST",
+      credentials: "omit",
+      headers: {
+        apikey: INTERN.schluessel,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      signal: abbruch.signal,
+      body: JSON.stringify({
+        daten: {
+          name: daten.name.trim(),
+          email: daten.email.trim(),
+          telefon: daten.telefon.trim(),
+          adresse: daten.adresse.trim(),
+          leistung: daten.leistung,
+          fenster_normal: fensterAnzahl(daten.fenster_normal),
+          fenster_boden: fensterAnzahl(daten.fenster_bodentief),
+          nachricht: daten.nachricht.trim(),
+          termin_start: daten.termin_start || "",
+        },
+      }),
+    });
+    if (!antwort.ok) throw new Error(`Status ${antwort.status}`);
+  } finally {
+    clearTimeout(zeitlimit);
+  }
+}
+
 const form = document.querySelector("[data-form]");
 
 if (form) {
@@ -359,7 +396,7 @@ if (form) {
     status.classList.toggle("is-error", fehler);
   };
 
-  // Vorhandene direkte E-Mail-Ausweichmöglichkeit für Anfragen ohne Buchung.
+  // Direkte E-Mail-Ausweichmöglichkeit, falls die Übertragung fehlschlägt.
   const perMailAnbieten = (nachricht) => {
     const link = document.createElement("a");
     link.className = "btn btn--ghost form__mail";
@@ -431,26 +468,20 @@ if (form) {
     return daten;
   };
 
-  /* Termin über Cal.com: Die Seite zeigt nur Zeiten, die im gemeinsamen Kalender frei sind,
-     und bucht beim Absenden direkt mit den Angaben aus dem Formular – kein zweites Formular.
-     Die Zeiten werden erst nach dem Tippen auf den Knopf von Cal.com geladen. */
-  const CAL = { api: "https://api.cal.com/v2", nutzer: "klarglas", termin: "fensterreinigung" };
+  /* Freie Zeiten aus Supabase; der Termin wird anschließend im Dashboard bestätigt. */
   const buchung = form.querySelector("[data-buchung]");
-  let gewaehlt = null; // { start: ISO-Zeit von Cal.com, lesbar: "Samstag, 4. Oktober um 9:00 Uhr" }
-
-  // Cal.com will Telefonnummern im internationalen Format: 0170 … wird zu +49170…
-  const telefonInternational = (roh) => {
-    let nummer = (roh || "").replace(/[^\d+]/g, "");
-    if (!nummer) return "";
-    if (nummer.startsWith("00")) nummer = `+${nummer.slice(2)}`;
-    else if (nummer.startsWith("0")) nummer = `+49${nummer.slice(1)}`;
-    else if (!nummer.startsWith("+")) nummer = `+49${nummer}`;
-    return nummer.length >= 8 ? nummer : "";
-  };
-
-  const uhrzeitAus = (d) => `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
-
-  let zeitenNeuLaden = () => {};
+  let gewaehlt = null;
+  let wirdGesendet = false;
+  const terminDatum = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit",
+  });
+  const terminLang = new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin", weekday: "long", day: "numeric", month: "long",
+  });
+  const terminUhr = new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit",
+  });
+  const uhrzeitAus = (d) => terminUhr.format(d);
 
   if (buchung) {
     const start = buchung.querySelector("[data-buchung-start]");
@@ -477,35 +508,49 @@ if (form) {
       box.querySelectorAll(".slot").forEach((b) => b.setAttribute("aria-pressed", String(b === aktiv)));
 
     const absendenBeschriften = () => {
-      absenden.textContent = gewaehlt ? "Termin buchen und senden" : "Anfrage senden";
+      absenden.textContent = gewaehlt ? "Termin anfragen und senden" : "Anfrage senden";
     };
 
     const zeitenZeigen = (tag, tagKnopf) => {
       markieren(tageBox, tagKnopf);
       gewaehlt = null;
       absendenBeschriften();
-      zeitenBox.replaceChildren(
-        ...freieZeiten[tag].map(({ start: beginn }) => {
-          const zeit = new Date(beginn);
-          const b = knopf(uhrzeitAus(zeit));
-          b.setAttribute("aria-label", `${datumLang.format(zeit)} um ${uhrzeitAus(zeit)} Uhr`);
-          b.addEventListener("click", () => {
-            markieren(zeitenBox, b);
-            gewaehlt = { start: beginn, lesbar: `${datumLang.format(zeit)} um ${uhrzeitAus(zeit)} Uhr` };
-            absendenBeschriften();
-          });
-          return b;
-        })
-      );
+      const zeitKnopf = (beginn) => {
+        const zeit = new Date(beginn);
+        const b = knopf(uhrzeitAus(zeit));
+        b.setAttribute("aria-label", `${terminLang.format(zeit)} um ${uhrzeitAus(zeit)} Uhr`);
+        b.addEventListener("click", () => {
+          markieren(zeitenBox, b);
+          gewaehlt = { start: beginn, lesbar: `${terminLang.format(zeit)} um ${uhrzeitAus(zeit)} Uhr` };
+          absendenBeschriften();
+        });
+        return b;
+      };
+      // Viele freie Zeiten: erst nur volle Stunden, höchstens 5 (Handy) bzw. 10 (Computer), Rest über „Mehr Zeiten“
+      const alle = freieZeiten[tag];
+      const grenze = window.matchMedia("(max-width: 700px)").matches ? 5 : 10;
+      let kurz = alle;
+      if (alle.length > grenze) {
+        const volle = alle.filter((beginn) => uhrzeitAus(new Date(beginn)).endsWith(":00"));
+        kurz = (volle.length >= 3 ? volle : alle).slice(0, grenze);
+      }
+      const knoepfe = kurz.map(zeitKnopf);
+      if (kurz.length < alle.length) {
+        const mehr = knopf(`Mehr Zeiten (${alle.length - kurz.length})`, "slot--mehr");
+        mehr.removeAttribute("aria-pressed");
+        mehr.addEventListener("click", () => {
+          gewaehlt = null;
+          absendenBeschriften();
+          zeitenBox.replaceChildren(...alle.map(zeitKnopf));
+          zeitenBox.querySelector(".slot")?.focus();
+        });
+        knoepfe.push(mehr);
+      }
+      zeitenBox.replaceChildren(...knoepfe);
       zeitLabel.hidden = false;
     };
 
     const zeitenLaden = async () => {
-      const heute = new Date();
-      const bis = inTagen(15);
-      const url =
-        `${CAL.api}/slots?eventTypeSlug=${CAL.termin}&username=${CAL.nutzer}` +
-        `&start=${isoAus(heute)}&end=${isoAus(bis)}&timeZone=Europe/Berlin`;
       tageBox.replaceChildren();
       zeitenBox.replaceChildren();
       zeitLabel.hidden = true;
@@ -517,22 +562,48 @@ if (form) {
       lade.textContent = "Freie Termine werden geladen …";
       tageBox.append(lade);
 
+      const abbruch = new AbortController();
+      const zeitlimit = setTimeout(() => abbruch.abort(), 15000);
       try {
-        const antwort = await fetch(url, { headers: { "cal-api-version": "2024-09-04" } });
+        if (!INTERN.url || !INTERN.schluessel) throw new Error("Anbindung fehlt");
+        const antwort = await fetch(`${INTERN.url}/functions/v1/slots`, {
+          headers: { apikey: INTERN.schluessel },
+          credentials: "omit",
+          cache: "no-store",
+          signal: abbruch.signal,
+        });
         if (!antwort.ok) throw new Error(`Status ${antwort.status}`);
-        freieZeiten = (await antwort.json()).data || {};
+        const ergebnis = await antwort.json();
+        if (!Array.isArray(ergebnis.slots)) throw new Error("Ungültige Terminliste");
+        const slotListe = [...new Set(ergebnis.slots
+          .filter((slot) => typeof slot === "string" && /(?:Z|[+-]\d{2}:\d{2})$/.test(slot))
+          .map((slot) => new Date(slot).getTime())
+          .filter((zeit) => Number.isFinite(zeit) && zeit > Date.now()))].sort((a, b) => a - b);
+        freieZeiten = {};
+        slotListe.forEach((zeit) => {
+          const d = new Date(zeit);
+          const tag = terminDatum.format(d);
+          if (!freieZeiten[tag]) freieZeiten[tag] = [];
+          freieZeiten[tag].push(d.toISOString());
+        });
       } catch {
         lade.textContent =
-          "Die freien Termine konnten gerade nicht geladen werden. Senden Sie die Anfrage einfach ohne Termin, wir melden uns.";
+          "Die freien Termine konnten gerade nicht geladen werden. Sie können Ihre Anfrage auch ohne Termin senden.";
+        start.hidden = false;
+        hinweis.hidden = false;
         return;
+      } finally {
+        clearTimeout(zeitlimit);
       }
 
       const tage = Object.keys(freieZeiten).filter((tag) => freieZeiten[tag].length).sort();
       if (!tage.length) {
-        lade.textContent = "In den nächsten zwei Wochen ist leider alles belegt. Senden Sie die Anfrage ohne Termin, wir melden uns.";
+        lade.textContent = "Aktuell sind keine freien Termine verfügbar. Senden Sie die Anfrage ohne Termin, wir melden uns.";
         return;
       }
-      const morgen = isoAus(inTagen(1));
+      const morgenDatum = datumAus(terminDatum.format(new Date()));
+      morgenDatum.setDate(morgenDatum.getDate() + 1);
+      const morgen = isoAus(morgenDatum);
       tageBox.replaceChildren(
         ...tage.map((tag) => {
           const d = datumAus(tag);
@@ -543,7 +614,6 @@ if (form) {
         })
       );
     };
-    zeitenNeuLaden = zeitenLaden;
 
     start.addEventListener("click", () => {
       if (start.getAttribute("aria-disabled") === "true") return;
@@ -583,98 +653,50 @@ if (form) {
     );
   }
 
-  // Bucht den gewählten Termin bei Cal.com mit den Angaben aus dem Formular
-  const terminBuchen = async (daten) => {
-    const normal = fensterAnzahl(daten.fenster_normal);
-    const boden = fensterAnzahl(daten.fenster_bodentief);
-    const notiz = [
-      normal + boden ? `Fenster: ${normal} normale, ${boden} bodentiefe (ca. ${fensterPreis(normal, boden)} €)` : "",
-      daten.telefon.trim() ? `Telefon: ${daten.telefon.trim()}` : "",
-      daten.nachricht.trim(),
-    ]
-      .filter(Boolean)
-      .join("\n");
-    const telefon = telefonInternational(daten.telefon);
-
-    const antwort = await fetch(`${CAL.api}/bookings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "cal-api-version": "2024-08-13" },
-      body: JSON.stringify({
-        start: new Date(gewaehlt.start).toISOString(),
-        eventTypeSlug: CAL.termin,
-        username: CAL.nutzer,
-        attendee: {
-          name: daten.name.trim(),
-          email: daten.email.trim(),
-          timeZone: "Europe/Berlin",
-          language: "de",
-          ...(telefon ? { phoneNumber: telefon } : {}),
-        },
-        location: { type: "attendeeAddress", address: daten.adresse.trim() },
-        bookingFieldsResponses: {
-          title: normal + boden ? `Fensterreinigung (${normal + boden} Fenster)` : "Fensterreinigung",
-          notes: notiz,
-          ...(telefon ? { attendeePhoneNumber: telefon } : {}),
-        },
-      }),
-    });
-    const ergebnis = await antwort.json().catch(() => ({}));
-    if (!antwort.ok || ergebnis.status === "error") {
-      const grund = (ergebnis.error && ergebnis.error.message) || `Status ${antwort.status}`;
-      throw new Error(grund);
-    }
-  };
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (wirdGesendet) return;
 
     const daten = allesPruefen();
     if (!daten) return;
-
-    // Honeypot: Menschen sehen das Feld nicht, Spam-Bots füllen es aus.
     if (daten._honey) {
       form.reset();
       melden("Danke, Ihre Anfrage ist angekommen. Wir melden uns in etwa 15 Minuten.");
       return;
     }
 
+    // Auswahl für diese Anfrage festhalten, auch wenn sich die Oberfläche später ändert.
+    const wunschtermin = gewaehlt;
+    if (wunschtermin) {
+      daten.termin_start = wunschtermin.start;
+      daten.termin = terminDatum.format(new Date(wunschtermin.start));
+      daten.uhrzeit = `um ${uhrzeitAus(new Date(wunschtermin.start))} Uhr (Wunschtermin, noch unbestätigt)`;
+    }
+    wirdGesendet = true;
     absenden.disabled = true;
-    absenden.textContent = gewaehlt ? "Termin wird gebucht …" : "Wird gesendet …";
+    absenden.textContent = "Wird gesendet …";
+    form.setAttribute("aria-busy", "true");
+    melden("Ihre Anfrage wird gesendet …");
 
-    // Erst den Termin fest buchen – ist er inzwischen weg, wird nichts gesendet
-    let terminGebucht = "";
-    if (gewaehlt) {
-      try {
-        await terminBuchen(daten);
-        terminGebucht = gewaehlt.lesbar;
-        daten.termin = isoAus(new Date(gewaehlt.start));
-        daten.uhrzeit = `um ${uhrzeitAus(new Date(gewaehlt.start))} Uhr (fest gebucht)`;
-        // Gebucht ist gebucht: ein zweiter Klick darf keinen zweiten Termin anlegen
-        gewaehlt = null;
-      } catch (fehler) {
-        absenden.disabled = false;
-        const telefonFehlt = /phone/i.test(fehler.message) && !daten.telefon.trim();
-        if (telefonFehlt) {
-          absenden.textContent = "Termin buchen und senden";
-          form.querySelector("#telefon").focus();
-          melden("Für die Terminbuchung brauchen wir Ihre Telefonnummer. Bitte tragen Sie sie oben ein.", true);
-        } else {
-          melden("Dieser Termin ist leider gerade weggegangen oder konnte nicht gebucht werden. Bitte wählen Sie einen anderen.", true);
-          zeitenNeuLaden();
-        }
-        return;
-      }
-    }
-
-    if (terminGebucht) {
+    try {
+      await ansDashboard(daten);
+      gewaehlt = null;
       form.reset();
-      melden(`Danke! Ihr Termin am ${terminGebucht} steht. Die Bestätigung kommt per E-Mail.`);
-    } else {
-      melden("Ohne Termin können Sie uns Ihre Anfrage direkt per E-Mail senden.");
+      melden(wunschtermin
+        ? `Danke! Ihre Anfrage für ${wunschtermin.lesbar} ist angekommen. Der Termin steht erst nach unserer Bestätigung per E-Mail fest.`
+        : "Danke, Ihre Anfrage ist angekommen. Wir melden uns in etwa 15 Minuten."
+      );
+    } catch {
+      // Bei einer unterbrochenen Antwort ist eine Speicherung ungewiss. Nie automatisch erneut senden.
+      melden("Wir konnten die Übertragung gerade nicht bestätigen. Ihre Eingaben bleiben erhalten. Bitte kontaktieren Sie uns per E-Mail oder unter 0159 0660 2809, damit wir den Eingang prüfen können.", true);
       perMailAnbieten(anfrageNachricht(daten));
+    } finally {
+      wirdGesendet = false;
+      form.removeAttribute("aria-busy");
+      absenden.disabled = false;
+      absenden.textContent = gewaehlt ? "Termin anfragen und senden" : "Anfrage senden";
     }
-    absenden.disabled = false;
-    absenden.textContent = gewaehlt && !terminGebucht ? "Termin buchen und senden" : "Anfrage senden";
   });
   absenden.disabled = false;
 }

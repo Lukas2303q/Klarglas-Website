@@ -1601,7 +1601,7 @@ button,
   }
 }
 
-/* ---------- Formular: Termin über Cal.com ---------- */
+/* ---------- Formular: Wunschtermin anfragen ---------- */
 
 .booking__text {
   clear: both;
@@ -2353,4 +2353,12 @@ button,
     margin-inline: -0.5rem;
     padding: 1rem;
   }
+}
+
+/* „Mehr Zeiten“: gleiche Größe wie die Zeit-Knöpfe, aber erkennbar anders */
+.slot--mehr {
+  border-style: dashed;
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: transparent;
 }
