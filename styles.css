@@ -2362,3 +2362,46 @@ button,
   border-color: var(--accent);
   background: transparent;
 }
+
+
+/* Preise der Hauptleistung: am Computer bei Hover/Fokus, auf Touch-Geräten sichtbar. */
+.lineup__details {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(43, 92, 255, 0.15);
+  color: var(--navy);
+  font-size: 0.9375rem;
+}
+.lineup__details strong { color: var(--accent-deep); }
+.lineup__minimum { padding-top: 0.3rem; border-top: 1px solid var(--line); }
+.lineup__row--featured .lineup__price { white-space: normal; }
+.lineup__cta { justify-self: start; margin-top: 0.75rem; }
+.lineup__mail { font-size: 0.9375rem; color: var(--accent-deep); display: inline-block; margin-top: 0.5rem; }
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  .lineup__row--featured .lineup__body { position: relative; }
+  .lineup__details {
+    position: absolute;
+    top: 3.25rem;
+    inset-inline: 0;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    background: var(--paper, #fffefc);
+    box-shadow: 0 12px 28px -14px rgba(1, 15, 43, 0.3);
+    transform: translateY(0.3rem);
+    transition: opacity 180ms ease, transform 180ms ease;
+  }
+  .lineup__row--featured:hover .lineup__details,
+  .lineup__row--featured:focus-within .lineup__details {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lineup__details { transition: none; }
+}

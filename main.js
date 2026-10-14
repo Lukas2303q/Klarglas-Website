@@ -1,4 +1,5 @@
 const KONTAKT_MAIL = "info@klarglas-berlin.de";
+const MAIL_ZIEL = `https://formsubmit.co/ajax/${KONTAKT_MAIL}`;
 // Öffentliche Supabase-Anbindung für Anfragen und verfügbare Termine.
 const INTERN = { url: "https://iwkklvjfftrjembrgnwv.supabase.co", schluessel: "sb_publishable_rSlCwQ_qWRGCEGLMfKkwzA_RrOjl5xG" };
 
@@ -172,7 +173,7 @@ const fensterPreis = (normal, boden) => fensterAnzahl(normal) * 5 + fensterAnzah
 // Bei diesen Leistungen geht es nur um Fenster – dort gilt der Mindestauftrag
 const NUR_FENSTER = ["Fensterreinigung"];
 // Bei diesen Leistungen spielen Fenster keine Rolle – der Zähler wird ausgegraut
-const OHNE_FENSTER = ["Felgenreinigung", "Nachbarschaftshilfe"];
+const OHNE_FENSTER = ["Nachbarschaftshilfe"];
 
 const WOCHENTAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const datumLang = new Intl.DateTimeFormat("de-DE", { weekday: "long", day: "numeric", month: "long" });
@@ -293,9 +294,7 @@ function fensterZaehler(form) {
     zeigen(s);
 
     const warnen = !box.disabled && unterMindest();
-    hinweis.textContent = leistung && leistung.value === "Mehreres zusammen"
-      ? `Die Fenster allein liegen unter ${PREIS_MINDEST} €. Den Gesamtpreis für die kombinierten Leistungen bestätigen wir per E-Mail.`
-      : `Der Mindestauftrag liegt bei ${PREIS_MINDEST} €. Ergänzen Sie Fenster, bis die Schätzung mindestens ${PREIS_MINDEST} € beträgt.`;
+    hinweis.textContent = `Der Mindestauftrag liegt bei ${PREIS_MINDEST} €. Ergänzen Sie Fenster, bis die Schätzung mindestens ${PREIS_MINDEST} € beträgt.`;
     hinweis.hidden = !warnen;
     zeilen.forEach((z) => {
       if (warnen) z.feld.setAttribute("aria-describedby", hinweis.id);
@@ -317,7 +316,7 @@ function fensterZaehler(form) {
     });
   });
 
-  // Felgen oder Nachbarschaftshilfe: Zähler ausgrauen, damit niemand unnötig Fenster zählt.
+  // Nachbarschaftshilfe: Der Fenster-Zähler wird ausgegraut.
   // Ein deaktiviertes fieldset schickt seine Werte auch nicht mit.
   const leistung = form.querySelector("#leistung");
   const leistungPruefen = () => {
@@ -379,11 +378,62 @@ async function ansDashboard(daten) {
   }
 }
 
+// Zusätzliche interne Mail. Die Datenbank-Anfrage wird dafür nicht erneut angelegt.
+async function anfrageMail(daten) {
+  const nachricht = anfrageNachricht(daten);
+  const normal = fensterAnzahl(daten.fenster_normal);
+  const boden = fensterAnzahl(daten.fenster_bodentief);
+  const fenster = daten.leistung === "Fensterreinigung";
+  const abbruch = new AbortController();
+  const zeitlimit = setTimeout(() => abbruch.abort(), 15000);
+  try {
+    const antwort = await fetch(MAIL_ZIEL, {
+      method: "POST",
+      credentials: "omit",
+      keepalive: true,
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      signal: abbruch.signal,
+      body: JSON.stringify({
+        Kunde: nachricht.Name,
+        "E-Mail": daten.email.trim(),
+        Telefon: nachricht.Telefon,
+        Adresse: nachricht.Adresse,
+        Leistung: daten.leistung,
+        "Normale Fenster": fenster ? normal : "Nicht zutreffend",
+        "Bodentiefe Fenster / Terrassentüren": fenster ? boden : "Nicht zutreffend",
+        "Preisschätzung": fenster && normal + boden ? `${fensterPreis(normal, boden)} €` : "Nach Absprache",
+        "Mindestauftragswert Fensterreinigung": `${PREIS_MINDEST} €`,
+        Wunschtermin: nachricht.Wunschtermin,
+        Terminstatus: daten.termin_start ? "Angefragt – noch zu bestätigen" : "Kein Termin ausgewählt",
+        Nachricht: nachricht.Nachricht,
+        Dashboard: "https://horlbecklouis-stack.github.io/klarglas-intern/#kunden",
+        _subject: nachricht.Betreff.replace(/[\r\n]/g, " "),
+        _replyto: daten.email.trim(),
+        _template: "table",
+      }),
+    });
+    const ergebnis = await antwort.json().catch(() => ({}));
+    if (!antwort.ok || String(ergebnis.success) !== "true") {
+      throw new Error(ergebnis.message || `Status ${antwort.status}`);
+    }
+  } finally {
+    clearTimeout(zeitlimit);
+  }
+}
+
 const form = document.querySelector("[data-form]");
 
 if (form) {
   // Absenden wird nach dem Binden der Formularbehandlung freigeschaltet.
   form.setAttribute("novalidate", "");
+
+  document.querySelectorAll("[data-leistung]").forEach((link) => {
+    link.addEventListener("click", () => {
+      const auswahl = form.querySelector("#leistung");
+      auswahl.value = link.dataset.leistung;
+      auswahl.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  });
 
   const status = form.querySelector("[data-form-status]");
   const absenden = form.querySelector("button[type='submit']");
@@ -622,13 +672,13 @@ if (form) {
       zeitenLaden();
     });
 
-    // Felgen und Nachbarschaftshilfe stimmen wir per E-Mail ab – dort gibt es keine Terminwahl
+    // Nachbarschaftshilfe stimmen wir persönlich ab – dort gibt es keine Terminwahl
     const leistungPruefen = () => {
       const aus = OHNE_FENSTER.includes(leistung.value);
       buchung.classList.toggle("is-aus", aus);
       start.setAttribute("aria-disabled", String(aus));
       text.textContent = aus
-        ? "Für Felgen und Nachbarschaftshilfe stimmen wir den Termin per E-Mail mit Ihnen ab."
+        ? "Für Nachbarschaftshilfe stimmen wir den Termin per E-Mail mit Ihnen ab."
         : textStandard;
       if (aus) {
         slots.hidden = true;
@@ -674,6 +724,8 @@ if (form) {
       daten.uhrzeit = `um ${uhrzeitAus(new Date(wunschtermin.start))} Uhr (Wunschtermin, noch unbestätigt)`;
     }
     wirdGesendet = true;
+    delete form.dataset.mailStatus;
+    delete form.dataset.dashboardStatus;
     absenden.disabled = true;
     absenden.textContent = "Wird gesendet …";
     form.setAttribute("aria-busy", "true");
@@ -681,6 +733,16 @@ if (form) {
 
     try {
       await ansDashboard(daten);
+      form.dataset.dashboardStatus = "saved";
+      // Erst speichern, dann genau eine interne Benachrichtigung versenden.
+      // Eine fehlgeschlagene Mail darf keinen zweiten Kundenauftrag auslösen.
+      try {
+        await anfrageMail(daten);
+        form.dataset.mailStatus = "sent";
+      } catch (mailFehler) {
+        form.dataset.mailStatus = "failed";
+        console.warn("Die Anfrage ist im Dashboard gespeichert; die Mail-Benachrichtigung konnte nicht bestätigt werden:", mailFehler.message);
+      }
       gewaehlt = null;
       form.reset();
       melden(wunschtermin
