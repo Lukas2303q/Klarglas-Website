@@ -712,7 +712,7 @@ if (form) {
     if (!daten) return;
     if (daten._honey) {
       form.reset();
-      melden("Danke, Ihre Anfrage ist angekommen. Wir melden uns in etwa 15 Minuten.");
+      melden("Danke, Ihre Anfrage ist angekommen. Wir melden uns so schnell wie möglich.");
       return;
     }
 
@@ -747,7 +747,7 @@ if (form) {
       form.reset();
       melden(wunschtermin
         ? `Danke! Ihre Anfrage für ${wunschtermin.lesbar} ist angekommen. Der Termin steht erst nach unserer Bestätigung per E-Mail fest.`
-        : "Danke, Ihre Anfrage ist angekommen. Wir melden uns in etwa 15 Minuten."
+        : "Danke, Ihre Anfrage ist angekommen. Wir melden uns so schnell wie möglich."
       );
     } catch {
       // Bei einer unterbrochenen Antwort ist eine Speicherung ungewiss. Nie automatisch erneut senden.

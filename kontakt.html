@@ -82,7 +82,7 @@
             <h1>Sagen Sie uns, worum es geht</h1>
             <p class="lede">
               Heute schreiben, morgen da. Fenster zählen, Termin wählen, absenden:
-              Die Bestätigung mit festem Preis kommt in etwa 15&nbsp;Minuten.
+              Wir melden uns so schnell wie möglich und bestätigen Ihnen Preis und Termin persönlich.
             </p>
           </div>
         </div>
@@ -114,8 +114,9 @@
 
             <div class="form__row">
               <div class="field">
-                <label for="telefon">Telefon <span class="field__hint">(optional)</span></label>
-                <input id="telefon" name="telefon" type="tel" inputmode="tel" autocomplete="tel" />
+                <label for="telefon">Telefon</label>
+                <input id="telefon" name="telefon" type="tel" inputmode="tel" autocomplete="tel" required pattern=".*[0-9].*" />
+                <span class="field__error">Bitte geben Sie Ihre Telefonnummer an.</span>
               </div>
               <div class="field">
                 <label for="adresse">Straße und Hausnummer</label>
@@ -264,9 +265,8 @@
                 </a>
               </div>
               <p class="lede" style="margin-top: 0.75rem">
-                Wir sind Louis und Lukas aus dem Märchenviertel. Auch wenn wir gerade in der
-                Schule oder auf der Leiter stehen: Ihre Anfrage bestätigen wir in etwa
-                15&nbsp;Minuten.
+                Wir sind Louis und Lukas aus dem Märchenviertel. Wir melden uns so
+                schnell wie möglich bei Ihnen.
               </p>
             </div>
           </aside>
