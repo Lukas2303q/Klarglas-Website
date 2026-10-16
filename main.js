@@ -535,14 +535,11 @@ if (form) {
 
   if (buchung) {
     const start = buchung.querySelector("[data-buchung-start]");
-    const text = buchung.querySelector("[data-buchung-text]");
     const hinweis = buchung.querySelector("[data-buchung-hinweis]");
     const slots = buchung.querySelector("[data-slots]");
     const tageBox = buchung.querySelector("[data-slot-tage]");
     const zeitenBox = buchung.querySelector("[data-slot-zeiten]");
     const zeitLabel = buchung.querySelector("[data-slot-label]");
-    const leistung = form.querySelector("#leistung");
-    const textStandard = text.textContent;
     let freieZeiten = {};
 
     const knopf = (beschriftung, klasse = "") => {
@@ -666,30 +663,10 @@ if (form) {
     };
 
     start.addEventListener("click", () => {
-      if (start.getAttribute("aria-disabled") === "true") return;
       start.hidden = true;
       hinweis.hidden = true;
       zeitenLaden();
     });
-
-    // Nachbarschaftshilfe stimmen wir persönlich ab – dort gibt es keine Terminwahl
-    const leistungPruefen = () => {
-      const aus = OHNE_FENSTER.includes(leistung.value);
-      buchung.classList.toggle("is-aus", aus);
-      start.setAttribute("aria-disabled", String(aus));
-      text.textContent = aus
-        ? "Für Nachbarschaftshilfe stimmen wir den Termin per E-Mail mit Ihnen ab."
-        : textStandard;
-      if (aus) {
-        slots.hidden = true;
-        gewaehlt = null;
-        start.hidden = false;
-        hinweis.hidden = false;
-        absendenBeschriften();
-      }
-    };
-    leistung.addEventListener("change", leistungPruefen);
-    leistungPruefen();
 
     form.addEventListener("reset", () =>
       setTimeout(() => {
@@ -698,7 +675,6 @@ if (form) {
         start.hidden = false;
         hinweis.hidden = false;
         absendenBeschriften();
-        leistungPruefen();
       })
     );
   }
