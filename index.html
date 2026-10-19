@@ -51,7 +51,7 @@
       imagesizes="100vw"
       fetchpriority="high"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20261019" />
     <script>
       document.documentElement.classList.add("js");
       // Sicherheitsnetz: Lädt die Animation nicht, wird nach 3 s alles direkt gezeigt.
@@ -833,10 +833,31 @@ Nicht sicher, ob wir zu Ihnen kommen? Fragen Sie einfach unverbindlich an.
               </div>
 
               <p class="form__legal">
-                Mit dem Absenden stimmen Sie zu, dass wir Ihre Angaben zur Bearbeitung
-                der Anfrage verwenden. Details in der
+                Wir verwenden Ihre Angaben zur Bearbeitung Ihrer Anfrage und zur Abwicklung eines möglichen Auftrags
+                und speichern sie dafür in unserer internen Kundenverwaltung.
+                Hinweise zu Empfängern, Speicherdauer und Ihren Rechten finden Sie in der
                 <a href="datenschutz.html">Datenschutzerklärung</a>.
               </p>
+
+              <fieldset class="form__consent" aria-describedby="werbung-hinweis" data-werbung-version="2026-10-19-v1">
+                <legend>Erinnerungen zur Fensterreinigung <span class="field__hint">(freiwillig)</span></legend>
+                <label class="consent-choice" for="werbung-email">
+                  <input id="werbung-email" name="werbung_email" type="checkbox" value="ja" data-werbung-kanal="email" />
+                  <span data-werbung-text="email">Ja, Klar Glas darf mir per E-Mail gelegentlich Erinnerungen und Angebote zur Fensterreinigung senden.</span>
+                </label>
+                <label class="consent-choice" for="werbung-whatsapp">
+                  <input id="werbung-whatsapp" name="werbung_whatsapp" type="checkbox" value="ja" data-werbung-kanal="whatsapp" />
+                  <span data-werbung-text="whatsapp">Ja, Klar Glas darf mir per WhatsApp an meine angegebene Telefonnummer gelegentlich Erinnerungen und Angebote zur Fensterreinigung senden.</span>
+                </label>
+                <p class="form__legal" id="werbung-hinweis">
+                  Freiwillig: Ihre Anfrage ist auch ohne Haken möglich. Werbung erhalten Sie erst nach
+                  gesonderter Bestätigung für den jeweiligen Kanal. Sie können Ihre Einwilligung jederzeit
+                  mit Wirkung für die Zukunft widerrufen, per E-Mail an
+                  <a href="mailto:info@klarglas-berlin.de">info@klarglas-berlin.de</a>
+                  oder bei WhatsApp mit „STOP“. Einzelheiten in der
+                  <a href="datenschutz.html#erinnerungen">Datenschutzerklärung</a>.
+                </p>
+              </fieldset>
 
               <button class="btn btn--primary btn--wide" type="submit" disabled>Anfrage senden</button>
 
@@ -934,6 +955,6 @@ Nicht sicher, ob wir zu Ihnen kommen? Fragen Sie einfach unverbindlich an.
     <script src="ScrollTrigger.min.js" defer></script>
     <script src="CustomEase.min.js" defer></script>
     <script src="lenis.min.js" defer></script>
-    <script src="main.js" defer></script>
+    <script src="main.js?v=20261019" defer></script>
   </body>
 </html>

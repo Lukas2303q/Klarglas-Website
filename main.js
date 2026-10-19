@@ -224,6 +224,7 @@ const anfrageNachricht = (daten) => {
     nachricht ? `Nachricht: „${nachricht}“` : "Eine zusätzliche Nachricht gibt es nicht.",
     "",
     `Wer auf diese E-Mail antwortet, schreibt direkt an ${name}.`,
+    daten.werbewunsch ? `\n${werbewunschText(daten)}` : "",
   ].join("\n");
 
   return {
@@ -343,6 +344,52 @@ function fensterZaehler(form) {
   return { unterMindest, normalisieren, erstesFeld: zeilen[0].feld, hinweis };
 }
 
+// Freiwillige Kanalwahl nur als unbestätigten Anmeldewunsch erfassen.
+// Das spätere Versandtool muss den jeweiligen Kanal bestätigen und Widerrufe beachten.
+function werbewunschErfassen(form, daten) {
+  const box = form.querySelector(".form__consent");
+  if (!box) return;
+  const kanaele = ["email", "whatsapp"].filter((kanal) =>
+    form.querySelector(`[data-werbung-kanal="${kanal}"]`)?.checked
+  );
+  if (!kanaele.length) return;
+  const wortlaut = kanaele.map((kanal) => ({
+    kanal,
+    text: box.querySelector(`[data-werbung-text="${kanal}"]`).textContent.trim(),
+  }));
+  const hinweis = form.querySelector("#werbung-hinweis").textContent.replace(/\s+/g, " ").trim();
+  daten.werbewunsch = {
+    status: "bestaetigung_ausstehend",
+    kanaele,
+    version: box.dataset.werbungVersion,
+    formular_url: window.location.origin + window.location.pathname,
+    client_zeitpunkt: new Date().toISOString(),
+    wortlaut,
+    hinweis,
+  };
+}
+
+function werbewunschText(daten) {
+  const wunsch = daten.werbewunsch;
+  if (!wunsch) return "Keine Werbe-Anmeldung über dieses Formular. Frühere Widerrufe oder Einwilligungen werden dadurch nicht geändert.";
+  return [
+    "Werbe-Anmeldung: Bestätigung ausstehend – noch nicht für Werbung freigegeben.",
+    `Gewählte Kanäle: ${wunsch.kanaele.join(", ")}`,
+    `Textversion: ${wunsch.version}`,
+    `Formular: ${wunsch.formular_url}`,
+    `Zeitpunkt laut Browser (UTC, nicht serverseitig bestätigt): ${wunsch.client_zeitpunkt}`,
+    ...wunsch.wortlaut.map((eintrag) => `${eintrag.kanal}: ${eintrag.text}`),
+    `Hinweis: ${wunsch.hinweis}`,
+  ].join("\n");
+}
+
+function dashboardNachricht(daten) {
+  const nachricht = daten.nachricht.trim();
+  if (!daten.werbewunsch) return nachricht;
+  // Vorhandenes Nachrichtenfeld verwenden: keine unbekannten Datenbankspalten voraussetzen.
+  return [nachricht, "--- Freiwilliger Werbe-Anmeldewunsch ---", werbewunschText(daten)].filter(Boolean).join("\n\n");
+}
+
 // Pro Absenden genau eine Anfrage; Erfolg erst nach Bestätigung durch Supabase.
 async function ansDashboard(daten) {
   if (!INTERN.url || !INTERN.schluessel) throw new Error("Anbindung fehlt");
@@ -367,7 +414,7 @@ async function ansDashboard(daten) {
           leistung: daten.leistung,
           fenster_normal: fensterAnzahl(daten.fenster_normal),
           fenster_boden: fensterAnzahl(daten.fenster_bodentief),
-          nachricht: daten.nachricht.trim(),
+          nachricht: dashboardNachricht(daten),
           termin_start: daten.termin_start || "",
         },
       }),
@@ -406,6 +453,7 @@ async function anfrageMail(daten) {
         Wunschtermin: nachricht.Wunschtermin,
         Terminstatus: daten.termin_start ? "Angefragt – noch zu bestätigen" : "Kein Termin ausgewählt",
         Nachricht: nachricht.Nachricht,
+        "Freiwillige Werbe-Anmeldung": werbewunschText(daten),
         Dashboard: "https://horlbecklouis-stack.github.io/klarglas-intern/#kunden",
         _subject: nachricht.Betreff.replace(/[\r\n]/g, " "),
         _replyto: daten.email.trim(),
@@ -699,6 +747,7 @@ if (form) {
       daten.termin = terminDatum.format(new Date(wunschtermin.start));
       daten.uhrzeit = `um ${uhrzeitAus(new Date(wunschtermin.start))} Uhr (Wunschtermin, noch unbestätigt)`;
     }
+    werbewunschErfassen(form, daten);
     wirdGesendet = true;
     delete form.dataset.mailStatus;
     delete form.dataset.dashboardStatus;
