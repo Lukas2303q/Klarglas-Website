@@ -469,6 +469,214 @@ async function anfrageMail(daten) {
   }
 }
 
+/* Fragen nacheinander; dieselben Formularfelder und derselbe Versandweg. */
+function formularSchritte(form, { rechner, pruefen, melden, termin }) {
+  const auswahl = form.querySelector('#leistung');
+  const feld = (id) => form.querySelector(`#${id}`).closest('.field');
+  const absenden = form.querySelector('button[type="submit"]');
+  const status = form.querySelector('[data-form-status]');
+  const zaehler = form.querySelector('[data-fenster]');
+  const nachricht = form.querySelector('#nachricht');
+  const legal = form.querySelector(':scope > .form__legal');
+  const einwilligung = form.querySelector('.form__consent');
+  const knopf = (text, klasse = 'btn btn--ghost') => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = klasse;
+    b.textContent = text;
+    return b;
+  };
+  const kopf = document.createElement('div');
+  kopf.className = 'form-flow__head';
+  const fortschritt = document.createElement('p');
+  fortschritt.className = 'form-flow__progress';
+  const balken = document.createElement('progress');
+  balken.max = 7;
+  balken.setAttribute('aria-label', 'Fortschritt der Anfrage');
+  kopf.append(fortschritt, balken);
+  const uebersicht = document.createElement('dl');
+  uebersicht.className = 'form-flow__summary';
+  const hilfe = document.createElement('p');
+  hilfe.className = 'form-flow__hint';
+  const schritte = [
+    ['Um welche Leistung geht es?', [feld('leistung')], 'Leistung'],
+    ['Was dürfen wir für Sie erledigen?', [hilfe, zaehler, feld('nachricht')], 'Auftrag'],
+    ['Wie heißen Sie?', [feld('name')], 'Name'],
+    ['Wie können wir Sie erreichen?', [feld('email'), feld('telefon')], 'Kontakt'],
+    ['Wo dürfen wir helfen?', [feld('adresse')], 'Adresse'],
+    ['Wann passt es Ihnen?', [form.querySelector('[data-buchung]')], 'Wunschtermin'],
+    ['Ist alles richtig?', [uebersicht, legal, einwilligung], 'Prüfen & senden'],
+  ].map(([titel, inhalt, kurz], i) => {
+    const bereich = document.createElement('section');
+    bereich.className = 'form-flow__step';
+    bereich.dataset.formStep = String(i);
+    const h = document.createElement('h3');
+    h.id = `anfrage-schritt-${i + 1}`;
+    h.tabIndex = -1;
+    h.textContent = titel;
+    bereich.setAttribute('aria-labelledby', h.id);
+    bereich.append(h, ...inhalt);
+    return { bereich, h, kurz };
+  });
+  form.querySelectorAll(':scope > .form__row').forEach((row) => row.remove());
+  form.removeAttribute('data-stagger');
+  form.classList.add('form-flow');
+  form.insertBefore(kopf, absenden);
+  schritte.forEach(({ bereich }) => form.insertBefore(bereich, absenden));
+  const navigation = document.createElement('div');
+  navigation.className = 'form-flow__nav';
+  const zurueck = knopf('Zurück');
+  const weiter = knopf('Weiter', 'btn btn--primary');
+  navigation.append(zurueck, weiter, absenden);
+  form.insertBefore(navigation, status);
+  status.tabIndex = -1;
+
+  // Die Auswahlkarten setzen das bestehende Leistungsfeld für den Versand.
+  auswahl.hidden = true;
+  const label = feld('leistung').querySelector('label');
+  label.hidden = true;
+  const karten = document.createElement('div');
+  karten.className = 'form-flow__choices';
+  karten.setAttribute('role', 'group');
+  karten.setAttribute('aria-label', 'Leistung auswählen');
+  const optionen = ['Fensterreinigung', 'Nachbarschaftshilfe'].map((name, i) => {
+    const b = knopf('', 'form-flow__choice');
+    const titel = document.createElement('strong');
+    titel.textContent = name;
+    const text = document.createElement('span');
+    text.textContent = i === 0 ? '5 € normal · 10 € bodentief · ab 25 € Auftragswert' : 'Kleine Aufgaben im Alltag · Preis nach Absprache';
+    b.append(titel, text);
+    b.addEventListener('click', () => {
+      auswahl.value = name;
+      auswahl.dispatchEvent(new Event('change', { bubbles: true }));
+      pruefen(auswahl, false);
+    });
+    karten.append(b);
+    return b;
+  });
+  feld('leistung').insertBefore(karten, auswahl);
+  let aktuell = 0;
+  let gesperrt = false;
+  const leistungAktualisieren = () => {
+    optionen.forEach((b, i) => b.setAttribute('aria-pressed', String(auswahl.selectedIndex === i + 1)));
+    const fenster = auswahl.value === 'Fensterreinigung';
+    zaehler.hidden = !fenster;
+    hilfe.textContent = fenster
+      ? 'Zählen Sie Ihre Fenster für eine erste Preisschätzung. Wenn Sie die Anzahl noch nicht kennen, lassen Sie die Zähler bei 0.'
+      : 'Beschreiben Sie kurz, wobei Sie Unterstützung brauchen – zum Beispiel Laub fegen, Mülltonnen herausstellen oder eine kleine Besorgung. Den Preis vereinbaren wir persönlich.';
+    nachricht.placeholder = fenster ? 'Zum Beispiel: Fenster im 1. Stock, Besonderheiten beim Zugang …' : 'Zum Beispiel: Laub im Vorgarten zusammenfegen …';
+  };
+  const zeile = (titel, wert, ziel) => {
+    const row = document.createElement('div');
+    const dt = document.createElement('dt');
+    const dd = document.createElement('dd');
+    dt.textContent = titel;
+    dd.textContent = wert;
+    const aendern = knopf('Ändern', 'form-flow__edit');
+    aendern.setAttribute('aria-label', `${titel} ändern`);
+    aendern.addEventListener('click', () => zeigen(ziel));
+    row.append(dt, dd, aendern);
+    uebersicht.append(row);
+  };
+  const zusammenfassen = () => {
+    uebersicht.replaceChildren();
+    const daten = Object.fromEntries(new FormData(form).entries());
+    zeile('Leistung', daten.leistung, 0);
+    if (daten.leistung === 'Fensterreinigung') {
+      const normal = fensterAnzahl(daten.fenster_normal);
+      const boden = fensterAnzahl(daten.fenster_bodentief);
+      const summe = normal * 5 + boden * 10;
+      zeile('Fenster & Preis', summe ? `${normal} normal, ${boden} bodentief / Terrassentüren · ca. ${summe} €` : 'Anzahl noch offen · Mindestauftragswert 25 €', 1);
+    } else zeile('Preis', 'Nach Absprache', 1);
+    zeile('Ihre Nachricht', daten.nachricht.trim() || 'Keine zusätzliche Nachricht', 1);
+    zeile('Name', daten.name, 2);
+    zeile('Kontakt', `${daten.email}\n${daten.telefon}`, 3);
+    zeile('Adresse', daten.adresse, 4);
+    zeile('Wunschtermin', termin()?.lesbar ? `${termin().lesbar} · noch unbestätigt` : 'Ohne Wunschtermin – wir stimmen uns mit Ihnen ab.', 5);
+  };
+  const zeigen = (index, fokus = true) => {
+    if (gesperrt) return;
+    aktuell = index;
+    if (index === 6) zusammenfassen();
+    schritte.forEach(({ bereich }, i) => { bereich.hidden = i !== index; });
+    fortschritt.textContent = `Schritt ${index + 1} von ${schritte.length} · ${schritte[index].kurz}`;
+    balken.value = index + 1;
+    zurueck.hidden = index === 0;
+    weiter.hidden = index === 6;
+    absenden.hidden = index !== 6;
+    weiter.textContent = index === 5 ? (termin() ? 'Zur Übersicht' : 'Ohne Wunschtermin weiter') : 'Weiter';
+    if (fokus) {
+      status.textContent = '';
+      status.classList.remove('is-visible', 'is-error');
+      schritte[index].h.focus();
+    }
+    if (window.ScrollTrigger) window.ScrollTrigger.refresh();
+  };
+  const feldZeigen = (input) => {
+    const index = schritte.findIndex(({ bereich }) => bereich.contains(input));
+    if (index >= 0) zeigen(index);
+    if (input === auswahl) optionen[0].focus();
+    else input.focus();
+  };
+  const naechster = () => {
+    if (gesperrt) return;
+    const felder = [...schritte[aktuell].bereich.querySelectorAll('.field input, .field select, .field textarea')];
+    let erstes = null;
+    felder.forEach((input) => {
+      const fehler = !input.checkValidity();
+      pruefen(input, fehler);
+      if (fehler && !erstes) erstes = input;
+    });
+    if (erstes) {
+      feldZeigen(erstes);
+      melden('Bitte ergänzen Sie die markierten Felder.', true);
+      return;
+    }
+    if (aktuell === 1 && auswahl.value === 'Fensterreinigung' && rechner) {
+      rechner.normalisieren();
+      if (rechner.unterMindest()) {
+        rechner.erstesFeld.focus();
+        melden(`Der Mindestauftrag liegt bei ${PREIS_MINDEST} €. Ergänzen Sie bitte weitere Fenster.`, true);
+        return;
+      }
+    }
+    zeigen(Math.min(6, aktuell + 1));
+  };
+  zurueck.addEventListener('click', () => zeigen(Math.max(0, aktuell - 1)));
+  weiter.addEventListener('click', naechster);
+  auswahl.addEventListener('change', () => {
+    leistungAktualisieren();
+    if (aktuell !== 0) zeigen(0, false);
+  });
+  form.addEventListener('click', (event) => {
+    if (event.target.closest('[data-buchung]') && aktuell === 5) {
+      weiter.textContent = termin() ? 'Zur Übersicht' : 'Ohne Wunschtermin weiter';
+    }
+  });
+  form.addEventListener('reset', () => setTimeout(() => {
+    form.querySelectorAll('.field input, .field select, .field textarea').forEach((input) => pruefen(input, false));
+    leistungAktualisieren();
+    zeigen(0, false);
+  }));
+  leistungAktualisieren();
+  zeigen(0, false);
+  return {
+    feldZeigen,
+    vorAbsenden: () => {
+      if (aktuell === 6) return true;
+      naechster();
+      return false;
+    },
+    sperren: (wert) => {
+      gesperrt = wert;
+      zurueck.disabled = wert;
+      weiter.disabled = wert;
+      schritte.forEach(({ bereich }) => { bereich.inert = wert; });
+    },
+  };
+}
+
+
 const form = document.querySelector("[data-form]");
 
 if (form) {
@@ -487,6 +695,7 @@ if (form) {
   const absenden = form.querySelector("button[type='submit']");
   const felder = [...form.querySelectorAll(".field input, .field select, .field textarea")];
   const rechner = fensterZaehler(form);
+  let schrittFormular = null;
 
   const melden = (text, fehler = false) => {
     status.textContent = text;
@@ -549,7 +758,8 @@ if (form) {
     });
 
     if (erstesFehlerfeld) {
-      erstesFehlerfeld.focus();
+      if (schrittFormular) schrittFormular.feldZeigen(erstesFehlerfeld);
+      else erstesFehlerfeld.focus();
       melden("Bitte ergänzen Sie die markierten Felder.", true);
       return null;
     }
@@ -559,7 +769,8 @@ if (form) {
 
     // Mindestauftrag: Nur Fenster und unter 25 € – dann lohnt sich der Weg nicht
     if (rechner && rechner.unterMindest() && NUR_FENSTER.includes(daten.leistung)) {
-      rechner.erstesFeld.focus();
+      if (schrittFormular) schrittFormular.feldZeigen(rechner.erstesFeld);
+      else rechner.erstesFeld.focus();
       melden(`Der Mindestauftrag liegt bei ${PREIS_MINDEST} €. Ergänzen Sie Fenster, bis die Schätzung mindestens ${PREIS_MINDEST} € beträgt.`, true);
       return null;
     }
@@ -728,9 +939,12 @@ if (form) {
   }
 
 
+  schrittFormular = formularSchritte(form, { rechner, pruefen, melden, termin: () => gewaehlt });
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (wirdGesendet) return;
+    if (!schrittFormular.vorAbsenden()) return;
 
     const daten = allesPruefen();
     if (!daten) return;
@@ -749,6 +963,7 @@ if (form) {
     }
     werbewunschErfassen(form, daten);
     wirdGesendet = true;
+    schrittFormular.sperren(true);
     delete form.dataset.mailStatus;
     delete form.dataset.dashboardStatus;
     absenden.disabled = true;
@@ -780,6 +995,7 @@ if (form) {
       perMailAnbieten(anfrageNachricht(daten));
     } finally {
       wirdGesendet = false;
+      schrittFormular.sperren(false);
       form.removeAttribute("aria-busy");
       absenden.disabled = false;
       absenden.textContent = gewaehlt ? "Termin anfragen und senden" : "Anfrage senden";

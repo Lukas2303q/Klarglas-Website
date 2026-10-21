@@ -2474,3 +2474,41 @@ button,
 @media (prefers-reduced-motion: reduce) {
   .lineup__details { transition: none; }
 }
+
+/* Anfrage in kurzen Schritten */
+.form-flow [hidden] { display: none !important; }
+.form-flow { padding: clamp(1.1rem, 3vw, 2rem); border: 1px solid var(--border); border-radius: var(--r-media); background: var(--white); }
+.form-flow__head { display: grid; gap: .65rem; }
+.form-flow__progress { color: var(--ink-3); font-size: .875rem; font-weight: 600; }
+.form-flow progress { display: block; width: 100%; height: 6px; border: 0; border-radius: 99px; overflow: hidden; background: var(--surface); accent-color: var(--accent); }
+.form-flow progress::-webkit-progress-bar { background: var(--surface); }
+.form-flow progress::-webkit-progress-value { background: var(--accent); border-radius: 99px; }
+.form-flow progress::-moz-progress-bar { background: var(--accent); }
+.form-flow__step { display: grid; gap: 1.2rem; min-width: 0; padding-block: .7rem; }
+.form-flow__step h3 { font-size: clamp(1.4rem, 3vw, 1.8rem); line-height: 1.25; scroll-margin-top: 7rem; }
+.form-flow__hint { color: var(--ink-2); font-size: .9375rem; }
+.form-flow__choices { display: grid; gap: .85rem; }
+.form-flow__choice { display: grid; gap: .4rem; width: 100%; text-align: left; padding: 1.2rem; border: 2px solid var(--border); border-radius: 16px; color: var(--navy); background: var(--white); font: inherit; cursor: pointer; }
+.form-flow__choice strong { font-size: 1.0625rem; }
+.form-flow__choice span { font-size: .875rem; color: var(--ink-2); }
+.form-flow__choice:hover, .form-flow__choice[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-wash); }
+.form-flow__choice:focus-visible, .form-flow__edit:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.field.is-invalid .form-flow__choice { border-color: var(--error); }
+.form-flow__nav { display: flex; gap: .7rem; flex-wrap: wrap; justify-content: space-between; padding-top: .7rem; border-top: 1px solid var(--line); }
+.form-flow__nav > :last-child, .form-flow__nav > button:nth-child(2) { margin-left: auto; }
+.form-flow__nav .btn--wide { width: auto; }
+.form-flow__summary { display: grid; gap: 0; margin: 0; }
+.form-flow__summary > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .3rem .6rem; padding: .85rem 0; border-bottom: 1px solid var(--line); }
+.form-flow__summary dt { font-weight: 600; font-size: .875rem; }
+.form-flow__summary dd { grid-column: 1; margin: 0; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; font-size: .9375rem; }
+.form-flow__edit { grid-column: 2; grid-row: 1 / span 2; align-self: start; min-height: 44px; border: 0; padding: .4rem; background: transparent; color: var(--accent); font: inherit; font-size: .875rem; text-decoration: underline; cursor: pointer; }
+.form-flow [aria-busy="true"] { cursor: progress; }
+/* Unternehmensprofil neben dem Einsatzgebiet, auf dem Handy darunter. */
+.area__layout { display: grid; gap: 1.5rem; align-items: center; }
+.area__profile { display: grid; gap: 1rem; padding: clamp(1.5rem, 3vw, 2.5rem); border: 1px solid rgba(255,255,255,.3); border-radius: var(--r-media); color: var(--white); background: rgba(1,15,43,.88); }
+.area__profile h3 { color: var(--white); font-size: clamp(1.5rem, 3vw, 2rem); }
+.area__profile p { color: #e4e9f6; }
+.area__profile .tag { color: #c3d1ff; }
+.area__profile .btn { justify-self: start; white-space: normal; text-align: center; }
+@media (min-width: 900px) { .area__layout { grid-template-columns: 1.2fr 1fr; gap: clamp(1.5rem, 4vw, 4rem); } }
+@media (max-width: 380px) { .form-flow__nav .btn { padding-inline: .85rem; font-size: .9rem; } }

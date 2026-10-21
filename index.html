@@ -51,7 +51,7 @@
       imagesizes="100vw"
       fetchpriority="high"
     />
-    <link rel="stylesheet" href="styles.css?v=20261019-team" />
+    <link rel="stylesheet" href="styles.css?v=20261021-schritte" />
     <script>
       document.documentElement.classList.add("js");
       // Sicherheitsnetz: Lädt die Animation nicht, wird nach 3 s alles direkt gezeigt.
@@ -173,9 +173,12 @@
   "paymentAccepted": "Cash",
   "mainEntityOfPage": {
     "@id": "https://klarglas-berlin.de/#webseite"
-  }
+  },
+  "sameAs": [
+    "https://share.google/tRTTvKQQ9UAEieuOu"
+  ]
 }
-</script>
+    </script>
     <!--
       Bildnachweise: Joshua Bowers, Anaïs Murith, Pille R. Priske (Unsplash),
       Kate Filatova (Pexels). Hintergründe bei „Preise“ und „Einsatzgebiet“: eigene Bildgenerierung.
@@ -685,7 +688,7 @@
             alt=""
           />
         </div>
-        <div class="shell">
+        <div class="shell area__layout">
           <div class="area__card" data-fade>
             <span class="tag">Einsatzgebiet</span>
             <h2 id="gebiet-titel">Wir starten im Märchenviertel</h2>
@@ -699,6 +702,14 @@ Nicht sicher, ob wir zu Ihnen kommen? Fragen Sie einfach unverbindlich an.
               <span class="chip">Nachbarstraßen auf Anfrage</span>
             </div>
           </div>
+          <aside class="area__profile" aria-labelledby="google-profil-titel">
+            <span class="tag">Auch bei Google</span>
+            <h3 id="google-profil-titel">Klarglas in Ihrer Nähe</h3>
+            <p>Fensterreinigung und Nachbarschaftshilfe in Berlin-Köpenick.
+              Lernen Sie uns auch über unser Google-Unternehmensprofil kennen.</p>
+            <p>Dort finden Sie unseren Eintrag und können Ihre Erfahrungen mit uns teilen.</p>
+            <a class="btn btn--primary" href="https://share.google/tRTTvKQQ9UAEieuOu" target="_blank" rel="noopener noreferrer">Klarglas bei Google ansehen ↗</a>
+          </aside>
         </div>
       </section>
 
@@ -706,9 +717,9 @@ Nicht sicher, ob wir zu Ihnen kommen? Fragen Sie einfach unverbindlich an.
         <div class="shell">
           <div class="section-head">
             <span class="tag" data-fade>Anfrage</span>
-            <h2 data-split>Fenster zählen, Preis bekommen</h2>
+            <h2 data-split>Schritt für Schritt zur Anfrage</h2>
             <p class="lede" data-fade>
-              Fenster zählen, Termin wählen, absenden. Wir melden uns so schnell wie
+              Leistung wählen, ein paar Fragen beantworten, Anfrage prüfen. Wir melden uns so schnell wie
               möglich und bestätigen Ihnen Preis und Termin persönlich.
             </p>
           </div>
@@ -979,6 +990,6 @@ Nicht sicher, ob wir zu Ihnen kommen? Fragen Sie einfach unverbindlich an.
     <script src="ScrollTrigger.min.js" defer></script>
     <script src="CustomEase.min.js" defer></script>
     <script src="lenis.min.js" defer></script>
-    <script src="main.js?v=20261019" defer></script>
+    <script src="main.js?v=20261021-schritte" defer></script>
   </body>
 </html>
