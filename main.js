@@ -12,48 +12,27 @@ let lenis = null;
 /* ========== Kern: funktioniert auch ohne Animationsbibliothek ========== */
 
 
-/* ---------- Stummes Hintergrundvideo, auf Wunsch pausierbar ---------- */
+/* ---------- Stummes Hintergrundvideo ohne sichtbare Bedienelemente ---------- */
 const heroVideo = document.querySelector('[data-hero-video]');
-const heroVideoKnopf = document.querySelector('[data-hero-video-toggle]');
-if (heroVideo && heroVideoKnopf) {
-  let gewuenscht = !reduziert.matches && !navigator.connection?.saveData;
+if (heroVideo) {
   let sichtbar = true;
-  let versuch = 0;
   heroVideo.muted = true;
-  heroVideoKnopf.hidden = false;
-  const beschriften = () => {
-    const laeuft = !heroVideo.paused;
-    heroVideoKnopf.textContent = laeuft ? 'Video pausieren' : 'Video abspielen';
-    heroVideoKnopf.setAttribute('aria-label', laeuft ? 'Hintergrundvideo pausieren' : 'Hintergrundvideo abspielen');
-    heroVideoKnopf.setAttribute('aria-pressed', String(laeuft));
-  };
   const abgleichen = () => {
-    const id = ++versuch;
-    if (!gewuenscht || !sichtbar || document.hidden) {
+    if (reduziert.matches || navigator.connection?.saveData || !sichtbar || document.hidden) {
       heroVideo.pause();
-      beschriften();
       return;
     }
     const start = heroVideo.play();
-    if (start) start.then(() => {
-      if (id === versuch && (!gewuenscht || !sichtbar || document.hidden)) heroVideo.pause();
-      beschriften();
-    }).catch(() => { beschriften(); });
+    if (start) start.catch(() => { /* Bei gesperrtem Autoplay bleibt das vorhandene Standbild. */ });
   };
-  heroVideo.addEventListener('loadeddata', () => heroVideo.classList.add('is-ready'));
-  heroVideo.addEventListener('error', () => {
-    heroVideo.classList.remove('is-ready');
-    heroVideoKnopf.hidden = true;
+  heroVideo.addEventListener('loadeddata', () => {
+    if (!reduziert.matches && !navigator.connection?.saveData) heroVideo.classList.add('is-ready');
   });
-  heroVideo.addEventListener('play', beschriften);
-  heroVideo.addEventListener('pause', beschriften);
-  heroVideoKnopf.addEventListener('click', () => {
-    gewuenscht = heroVideo.paused;
-    abgleichen();
-  });
+  heroVideo.addEventListener('error', () => heroVideo.classList.remove('is-ready'));
   document.addEventListener('visibilitychange', abgleichen);
   reduziert.addEventListener('change', () => {
-    gewuenscht = !reduziert.matches && !navigator.connection?.saveData;
+    if (reduziert.matches) heroVideo.classList.remove('is-ready');
+    else if (heroVideo.readyState >= 2) heroVideo.classList.add('is-ready');
     abgleichen();
   });
   if ('IntersectionObserver' in window) {
@@ -62,7 +41,6 @@ if (heroVideo && heroVideoKnopf) {
       abgleichen();
     }).observe(heroVideo.closest('.hero'));
   } else abgleichen();
-  beschriften();
 }
 
 /* ---------- Menü ---------- */
@@ -220,7 +198,7 @@ if (actionbar && hero) {
 
 /* ---------- Formular ---------- */
 
-const PREIS_MINDEST = 25;
+const PREIS_MINDEST = 30;
 // Gleiche Mengen und Preise für Anzeige, E-Mail und Terminnotizen.
 const fensterAnzahl = (wert) => Math.min(99, Math.max(0, parseInt(wert, 10) || 0));
 const fensterPreis = (normal, boden) => fensterAnzahl(normal) * 5 + fensterAnzahl(boden) * 10;
@@ -247,6 +225,22 @@ const inTagen = (tage) => {
 const datumKurz = (d) => `${WOCHENTAGE[d.getDay()]} ${d.getDate()}.${d.getMonth() + 1}.`;
 const terminLesbar = (wert) => (wert ? datumLang.format(datumAus(wert)) : "");
 
+
+// Snapshot derselben Anfahrtsschätzung für Übersicht, Dashboard und Mail.
+function anfahrtAngabe(daten) {
+  const a = daten.anfahrt;
+  if (!a) return 'Noch offen – Anfahrtskosten vor der Auftragsbestätigung persönlich klären.';
+  const preis = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(a.kosten);
+  const km = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 3 }).format(a.meter / 1000);
+  return `${preis} zusätzlich, einmal pro Auftrag · ${km} km Luftlinie. Den Gesamtpreis bestätigen wir persönlich.`;
+}
+function gesamtAngabe(daten) {
+  if (!daten.anfahrt) return 'Noch offen – Anfahrt noch nicht berechnet.';
+  const fenster = fensterAnzahl(daten.fenster_normal) + fensterAnzahl(daten.fenster_bodentief);
+  if (daten.leistung !== 'Fensterreinigung' || !fenster) return `Leistung nach Absprache, zuzüglich ${daten.anfahrt.kosten} € Anfahrt.`;
+  return `Ca. ${fensterPreis(daten.fenster_normal, daten.fenster_bodentief) + daten.anfahrt.kosten} € inklusive ${daten.anfahrt.kosten} € Anfahrt.`;
+}
+
 // Baut aus den Formularangaben die E-Mail, die bei uns im Postfach landet.
 const anfrageNachricht = (daten) => {
   const name = daten.name.trim();
@@ -268,6 +262,8 @@ const anfrageNachricht = (daten) => {
   const text = [
     `${name} fragt über die Website an: ${daten.leistung}.`,
     `Adresse: ${daten.adresse.trim()}.`,
+    `Anfahrt: ${anfahrtAngabe(daten)}`,
+    `Gesamtschätzung: ${gesamtAngabe(daten)}`,
     normal + boden
       ? `Fenster: ${normal} normale, ${boden} bodentiefe · Schätzung ${schaetzung} €.`
       : "Eine Fensteranzahl hat die Person nicht angegeben.",
@@ -438,10 +434,10 @@ function werbewunschText(daten) {
 }
 
 function dashboardNachricht(daten) {
-  const nachricht = daten.nachricht.trim();
-  if (!daten.werbewunsch) return nachricht;
   // Vorhandenes Nachrichtenfeld verwenden: keine unbekannten Datenbankspalten voraussetzen.
-  return [nachricht, "--- Freiwilliger Werbe-Anmeldewunsch ---", werbewunschText(daten)].filter(Boolean).join("\n\n");
+  return [daten.nachricht.trim(), '--- Anfahrt und Gesamtschätzung ---', anfahrtAngabe(daten), gesamtAngabe(daten),
+    daten.anfahrt ? `Tarif ${daten.anfahrt.version}; Quelle: ${daten.anfahrt.quelle}. Schätzung laut Kundenauswahl, nicht serverseitig geprüft.` : '',
+    daten.werbewunsch ? '--- Freiwilliger Werbe-Anmeldewunsch ---\n' + werbewunschText(daten) : ''].filter(Boolean).join('\n\n');
 }
 
 // Pro Absenden genau eine Anfrage; Erfolg erst nach Bestätigung durch Supabase.
@@ -500,6 +496,8 @@ async function anfrageMail(daten) {
         Telefon: nachricht.Telefon,
         Adresse: nachricht.Adresse,
         Leistung: daten.leistung,
+        Anfahrt: anfahrtAngabe(daten),
+        "Gesamtschätzung inklusive Anfahrt": gesamtAngabe(daten),
         "Normale Fenster": fenster ? normal : "Nicht zutreffend",
         "Bodentiefe Fenster / Terrassentüren": fenster ? boden : "Nicht zutreffend",
         "Preisschätzung": fenster && normal + boden ? `${fensterPreis(normal, boden)} €` : "Nach Absprache",
@@ -524,7 +522,7 @@ async function anfrageMail(daten) {
 }
 
 /* Fragen nacheinander; dieselben Formularfelder und derselbe Versandweg. */
-function formularSchritte(form, { rechner, pruefen, melden, termin }) {
+function formularSchritte(form, { rechner, pruefen, melden, termin, anfahrt }) {
   const auswahl = form.querySelector('#leistung');
   const feld = (id) => form.querySelector(`#${id}`).closest('.field');
   const absenden = form.querySelector('button[type="submit"]');
@@ -557,7 +555,7 @@ function formularSchritte(form, { rechner, pruefen, melden, termin }) {
     ['Was dürfen wir für Sie erledigen?', [hilfe, zaehler, feld('nachricht')], 'Auftrag'],
     ['Wie heißen Sie?', [feld('name')], 'Name'],
     ['Wie können wir Sie erreichen?', [feld('email'), feld('telefon')], 'Kontakt'],
-    ['Wo dürfen wir helfen?', [feld('adresse')], 'Adresse'],
+    ['Wo dürfen wir helfen?', [feld('adresse'), form.querySelector('[data-anfahrt]')], 'Adresse'],
     ['Wann passt es Ihnen?', [form.querySelector('[data-buchung]')], 'Wunschtermin'],
     ['Ist alles richtig?', [uebersicht, legal, einwilligung], 'Prüfen & senden'],
   ].map(([titel, inhalt, kurz], i) => {
@@ -582,6 +580,12 @@ function formularSchritte(form, { rechner, pruefen, melden, termin }) {
   const zurueck = knopf('Zurück');
   const weiter = knopf('Weiter', 'btn btn--primary');
   navigation.append(zurueck, weiter, absenden);
+  const preisabschluss = document.createElement('section');
+  preisabschluss.className = 'form-flow__price';
+  preisabschluss.setAttribute('aria-label', 'Preis vor dem Absenden');
+  preisabschluss.setAttribute('aria-live', 'polite');
+  preisabschluss.hidden = true;
+  form.insertBefore(preisabschluss, status);
   form.insertBefore(navigation, status);
   status.tabIndex = -1;
 
@@ -598,7 +602,7 @@ function formularSchritte(form, { rechner, pruefen, melden, termin }) {
     const titel = document.createElement('strong');
     titel.textContent = name;
     const text = document.createElement('span');
-    text.textContent = i === 0 ? '5 € normal · 10 € bodentief · ab 25 € Auftragswert' : 'Kleine Aufgaben im Alltag · Preis nach Absprache';
+    text.textContent = i === 0 ? '5 € normal · 10 € bodentief · ab 30 € Auftragswert' : 'Kleine Aufgaben im Alltag · Preis nach Absprache';
     b.append(titel, text);
     b.addEventListener('click', () => {
       if (gesperrt || aktuell !== 0) return;
@@ -642,14 +646,50 @@ function formularSchritte(form, { rechner, pruefen, melden, termin }) {
       const normal = fensterAnzahl(daten.fenster_normal);
       const boden = fensterAnzahl(daten.fenster_bodentief);
       const summe = normal * 5 + boden * 10;
-      zeile('Fenster & Preis', summe ? `${normal} normal, ${boden} bodentief / Terrassentüren · ca. ${summe} €` : 'Anzahl noch offen · Mindestauftragswert 25 €', 1);
+      zeile('Fenster & Preis', summe ? `${normal} normal, ${boden} bodentief / Terrassentüren · ca. ${summe} €` : 'Anzahl noch offen · Mindestauftragswert 30 €', 1);
     } else zeile('Preis', 'Nach Absprache', 1);
     zeile('Ihre Nachricht', daten.nachricht.trim() || 'Keine zusätzliche Nachricht', 1);
     zeile('Name', daten.name, 2);
     zeile('Kontakt', `${daten.email}\n${daten.telefon}`, 3);
     zeile('Adresse', daten.adresse, 4);
+    daten.anfahrt = anfahrt?.wert() || null;
+    zeile('Anfahrt', anfahrtAngabe(daten), 4);
+    zeile('Gesamtschätzung', gesamtAngabe(daten), 4);
     zeile('Wunschtermin', termin()?.lesbar ? `${termin().lesbar} · noch unbestätigt` : 'Ohne Wunschtermin – wir stimmen uns mit Ihnen ab.', 5);
+    // Kompakte Preisaufstellung unmittelbar über den Senden-/Zurück-Knöpfen.
+    preisabschluss.replaceChildren();
+    const euro = (wert) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(wert);
+    const titel = document.createElement('h3');
+    titel.textContent = 'Ihr Preis im Überblick';
+    const aufstellung = document.createElement('dl');
+    const preiszeile = (name, wert) => {
+      const row = document.createElement('div');
+      const dt = document.createElement('dt');
+      const dd = document.createElement('dd');
+      dt.textContent = name;
+      dd.textContent = wert;
+      row.append(dt, dd);
+      aufstellung.append(row);
+    };
+    const fenster = daten.leistung === 'Fensterreinigung';
+    const leistung = fensterPreis(daten.fenster_normal, daten.fenster_bodentief);
+    preiszeile(daten.leistung, fenster && leistung > 0 ? euro(leistung) : fenster ? `Nach Absprache · mindestens ${euro(PREIS_MINDEST)}` : 'Preis nach Absprache');
+    preiszeile('Anfahrt', daten.anfahrt ? `${euro(daten.anfahrt.kosten)}${daten.anfahrt.kosten === 0 ? ' · kostenlos' : ''}` : 'Noch offen');
+    const gesamt = document.createElement('p');
+    gesamt.className = 'form-flow__price-total';
+    if (!daten.anfahrt) {
+      gesamt.textContent = fenster && leistung > 0 ? `${euro(leistung)} + Anfahrt nach Klärung` : 'Preis nach Absprache + Anfahrt nach Klärung';
+    } else if (fenster && leistung > 0) {
+      gesamt.textContent = `Gesamtschätzung: ${euro(leistung + daten.anfahrt.kosten)}`;
+    } else {
+      gesamt.textContent = `Preis nach Absprache + ${euro(daten.anfahrt.kosten)} Anfahrt`;
+    }
+    const hinweis = document.createElement('p');
+    hinweis.className = 'form-flow__price-note';
+    hinweis.textContent = 'Die Anfahrt gilt einmal pro Auftrag. Den festen Gesamtpreis bestätigen wir persönlich. Hier bezahlen Sie nichts.';
+    preisabschluss.append(titel, aufstellung, gesamt, hinweis);
   };
+  form.addEventListener('anfahrt:change', () => { if (aktuell === 6) zusammenfassen(); });
   const zeigen = (index, fokus = true) => {
     if (gesperrt) return;
     aktuell = index;
@@ -660,6 +700,7 @@ function formularSchritte(form, { rechner, pruefen, melden, termin }) {
     zurueck.hidden = index === 0;
     weiter.hidden = index === 0 || index === 6;
     absenden.hidden = index !== 6;
+    preisabschluss.hidden = index !== 6;
     weiter.textContent = index === 5 ? (termin() ? 'Zur Übersicht' : 'Ohne Wunschtermin weiter') : 'Weiter';
     if (fokus) {
       status.textContent = '';
@@ -751,6 +792,7 @@ if (form) {
   const absenden = form.querySelector("button[type='submit']");
   const felder = [...form.querySelectorAll(".field input, .field select, .field textarea")];
   const rechner = fensterZaehler(form);
+  const anfahrt = window.klarglasAnfahrt?.(form) || null;
   let schrittFormular = null;
 
   const melden = (text, fehler = false) => {
@@ -823,13 +865,14 @@ if (form) {
     if (rechner) rechner.normalisieren();
     const daten = Object.fromEntries(new FormData(form).entries());
 
-    // Mindestauftrag: Nur Fenster und unter 25 € – dann lohnt sich der Weg nicht
+    // Mindestauftrag: Nur Fenster und unter 30 € – dann lohnt sich der Weg nicht
     if (rechner && rechner.unterMindest() && NUR_FENSTER.includes(daten.leistung)) {
       if (schrittFormular) schrittFormular.feldZeigen(rechner.erstesFeld);
       else rechner.erstesFeld.focus();
       melden(`Der Mindestauftrag liegt bei ${PREIS_MINDEST} €. Ergänzen Sie Fenster, bis die Schätzung mindestens ${PREIS_MINDEST} € beträgt.`, true);
       return null;
     }
+    daten.anfahrt = anfahrt?.wert() || null;
     return daten;
   };
 
@@ -995,7 +1038,7 @@ if (form) {
   }
 
 
-  schrittFormular = formularSchritte(form, { rechner, pruefen, melden, termin: () => gewaehlt });
+  schrittFormular = formularSchritte(form, { rechner, pruefen, melden, termin: () => gewaehlt, anfahrt });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

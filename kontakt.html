@@ -9,7 +9,7 @@
     <title>Anfrage stellen – Klarglas, Berlin-Köpenick</title>
     <meta
       name="description"
-      content="Fensterreinigung in Berlin-Köpenick anfragen: normale Fenster 5 €, bodentiefe Fenster und Terrassentüren 10 €. Mindestauftragswert 25 €."
+      content="Fensterreinigung in Berlin-Köpenick anfragen: normale Fenster 5 €, bodentiefe Fenster und Terrassentüren 10 €. Mindestauftragswert 30 €."
     />
     <link rel="canonical" href="https://klarglas-berlin.de/kontakt.html" />
     <meta name="robots" content="index, follow, max-image-preview:large" />
@@ -18,7 +18,7 @@
     <meta property="og:locale" content="de_DE" />
     <meta property="og:url" content="https://klarglas-berlin.de/kontakt.html" />
     <meta property="og:title" content="Anfrage stellen – Klarglas, Berlin-Köpenick" />
-    <meta property="og:description" content="Fensterreinigung: 5 € normal, 10 € bodentief. Mindestauftragswert 25 €. Oder Nachbarschaftshilfe anfragen." />
+    <meta property="og:description" content="Fensterreinigung: 5 € normal, 10 € bodentief. Mindestauftragswert 30 €. Oder Nachbarschaftshilfe anfragen." />
     <meta property="og:image" content="https://klarglas-berlin.de/hero-quer-1920.webp" />
     <meta property="og:image:alt" content="Ein Fensterabzieher reinigt eine eingeseifte Scheibe." />
     <meta name="twitter:card" content="summary_large_image" />
@@ -26,7 +26,7 @@
     <meta name="theme-color" content="#fffefc" />
     <link rel="icon" href="/favicon.png" type="image/png" sizes="96x96" />
     <link rel="preload" href="figtree-latin.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="styles.css?v=20261025-video" />
+    <link rel="stylesheet" href="styles.css?v=20261025-preisabschluss" />
     <script>
       document.documentElement.classList.add("js");
     </script>
@@ -120,11 +120,18 @@
                 <span class="field__error">Bitte geben Sie Ihre Telefonnummer an.</span>
               </div>
               <div class="field">
-                <label for="adresse">Straße und Hausnummer</label>
-                <input id="adresse" name="adresse" type="text" autocomplete="street-address" required />
+                <label for="adresse">Straße, Hausnummer, PLZ und Ort</label>
+                <input id="adresse" name="adresse" type="text" placeholder="Zum Beispiel: Musterstraße 12, 12555 Berlin" autocomplete="street-address" required />
                 <span class="field__error">Ohne Adresse wissen wir nicht, ob wir zu Ihnen kommen.</span>
               </div>
             </div>
+
+            <section class="travel travel--automatic" data-anfahrt aria-labelledby="anfahrt-titel">
+  <h4 id="anfahrt-titel">Das ist Ihre Anfahrt</h4>
+  <p class="travel__status" data-anfahrt-status role="status" aria-live="polite">Geben Sie Ihre vollständige Adresse ein. Entfernung und Anfahrtskosten werden automatisch berechnet.</p>
+  <div class="travel__result" data-anfahrt-ergebnis role="status" aria-live="polite" hidden></div>
+  <p class="travel__privacy">Automatische Adressprüfung über Photon (komoot). Dabei werden Adresssuchtext und Verbindungsdaten an den Anbieter übertragen. <a href="datenschutz.html#adresskarte">Datenschutz</a></p>
+</section>
 
             <div class="field">
               <label for="leistung">Worum geht es?</label>
@@ -179,11 +186,11 @@
                       <span class="estimate__value"><span data-schaetzung-wert>0</span>&nbsp;€</span>
                     </p>
                     <p class="estimate__warn" id="mindest-hinweis" data-mindest hidden>
-                      Der Mindestauftrag liegt bei 25&nbsp;€. Ergänzen Sie Fenster, bis die Schätzung mindestens 25&nbsp;€ beträgt.
+                      Der Mindestauftrag liegt bei 30&nbsp;€. Ergänzen Sie Fenster, bis die Schätzung mindestens 30&nbsp;€ beträgt.
                     </p>
                   </div>
                   <p class="estimate__note">
-                    Fensterreinigung ab 25&nbsp;€ Auftragswert. Hier bezahlen Sie nichts. Den festen Preis bestätigen wir per E-Mail.
+                    Fensterreinigung ab 30&nbsp;€ Leistungspreis, zuzüglich gegebenenfalls Anfahrt. Hier bezahlen Sie nichts. Den festen Preis bestätigen wir per E-Mail.
                   </p>
                 </div>
               </div>
@@ -348,6 +355,8 @@
       <a class="btn btn--primary" href="#main">Formular</a>
     </div>
 
-    <script src="main.js?v=20261025-video-auswahl" defer></script>
+    <script src="anfahrt.js?v=20261025-kompakt-3" defer></script>
+    <script src="main.js?v=20261025-preisabschluss" defer></script>
   </body>
 </html>
+

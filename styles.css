@@ -2552,13 +2552,35 @@ button,
 /* Video ersetzt das Hero-Foto; das Standbild bleibt als Rückfallebene. */
 .hero__video { opacity: 0; pointer-events: none; transition: opacity .35s ease; }
 .hero__video.is-ready { opacity: 1; }
-.hero__video-toggle {
-  position: absolute; top: calc(6.5rem + env(safe-area-inset-top, 0px));
-  right: max(1.25rem, calc((100vw - 1280px) / 2)); z-index: 2;
-  min-height: 44px; padding: .65rem 1rem; border: 1px solid rgba(255,255,255,.5);
-  border-radius: 999px; background: rgba(1,15,43,.8); color: #fff;
-  font: inherit; font-size: .875rem; cursor: pointer;
-}
-.hero__video-toggle[hidden] { display: none; }
-.hero__video-toggle:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 @media (prefers-reduced-motion: reduce) { .hero__video { transition: none; } }
+
+/* Kompakte Anfahrtskarte im Adressschritt; Farben zusätzlich als Text erklärt. */
+.travel { display: grid; gap: 1rem; min-width: 0; padding: clamp(1rem, 3vw, 1.75rem); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.travel [hidden] { display: none !important; }
+.travel h4 { color: var(--navy); font-size: 1.3rem; line-height: 1.25; }
+.travel__intro { color: var(--ink-2); }
+.travel__privacy, .travel__small { font-size: .8125rem; line-height: 1.6; color: var(--ink-2); }
+.travel__privacy a { text-decoration: underline; }
+.travel__status { font-size: .9375rem; color: var(--ink-2); }
+.travel__result { padding: 1rem; background: var(--white); border-left: 4px solid var(--accent); border-radius: 8px; color: var(--navy); font-weight: 600; }
+
+/* Nur das persönliche Ergebnis statt einer vollständigen Tarifliste. */
+.travel__result { display: grid; gap: .5rem; }
+.travel__result[data-zone="blue"] { --travel-color: #2b5cff; }
+.travel__result[data-zone="purple"] { --travel-color: #8246ca; }
+.travel__result[data-zone="orange"] { --travel-color: #b45c10; }
+.travel__result[data-zone="extra"] { --travel-color: #8c4317; }
+.travel__result[data-zone] { border-left-color: var(--travel-color); }
+.travel__badge { display: flex; align-items: center; gap: .5rem; color: var(--travel-color); font-size: .9rem; }
+.travel__badge::before { content: ''; width: .75rem; height: .75rem; border-radius: 50%; background: currentColor; }
+.travel__amount { font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.2; }
+
+/* Preisaufstellung direkt vor dem Absenden. */
+.form-flow__price { display: grid; gap: 1rem; padding: clamp(1.2rem, 3vw, 2rem); border: 1px solid #cbd7ff; border-radius: 16px; background: #f0f4ff; }
+.form-flow__price h3 { font-size: clamp(1.2rem, 2.5vw, 1.5rem); line-height: 1.25; color: var(--navy); }
+.form-flow__price dl { display: grid; gap: .75rem; margin: 0; }
+.form-flow__price dl > div { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .3rem 1rem; }
+.form-flow__price dt { color: var(--ink-2); }
+.form-flow__price dd { margin: 0; font-weight: 600; text-align: right; }
+.form-flow__price-total { border-top: 1px solid #cbd7ff; padding-top: 1rem; font-size: clamp(1.2rem, 3vw, 1.65rem); font-weight: 700; line-height: 1.3; color: var(--navy); }
+.form-flow__price-note { color: var(--ink-2); font-size: .8125rem; line-height: 1.6; }
