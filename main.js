@@ -11,6 +11,60 @@ let lenis = null;
 
 /* ========== Kern: funktioniert auch ohne Animationsbibliothek ========== */
 
+
+/* ---------- Stummes Hintergrundvideo, auf Wunsch pausierbar ---------- */
+const heroVideo = document.querySelector('[data-hero-video]');
+const heroVideoKnopf = document.querySelector('[data-hero-video-toggle]');
+if (heroVideo && heroVideoKnopf) {
+  let gewuenscht = !reduziert.matches && !navigator.connection?.saveData;
+  let sichtbar = true;
+  let versuch = 0;
+  heroVideo.muted = true;
+  heroVideoKnopf.hidden = false;
+  const beschriften = () => {
+    const laeuft = !heroVideo.paused;
+    heroVideoKnopf.textContent = laeuft ? 'Video pausieren' : 'Video abspielen';
+    heroVideoKnopf.setAttribute('aria-label', laeuft ? 'Hintergrundvideo pausieren' : 'Hintergrundvideo abspielen');
+    heroVideoKnopf.setAttribute('aria-pressed', String(laeuft));
+  };
+  const abgleichen = () => {
+    const id = ++versuch;
+    if (!gewuenscht || !sichtbar || document.hidden) {
+      heroVideo.pause();
+      beschriften();
+      return;
+    }
+    const start = heroVideo.play();
+    if (start) start.then(() => {
+      if (id === versuch && (!gewuenscht || !sichtbar || document.hidden)) heroVideo.pause();
+      beschriften();
+    }).catch(() => { beschriften(); });
+  };
+  heroVideo.addEventListener('loadeddata', () => heroVideo.classList.add('is-ready'));
+  heroVideo.addEventListener('error', () => {
+    heroVideo.classList.remove('is-ready');
+    heroVideoKnopf.hidden = true;
+  });
+  heroVideo.addEventListener('play', beschriften);
+  heroVideo.addEventListener('pause', beschriften);
+  heroVideoKnopf.addEventListener('click', () => {
+    gewuenscht = heroVideo.paused;
+    abgleichen();
+  });
+  document.addEventListener('visibilitychange', abgleichen);
+  reduziert.addEventListener('change', () => {
+    gewuenscht = !reduziert.matches && !navigator.connection?.saveData;
+    abgleichen();
+  });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(([eintrag]) => {
+      sichtbar = eintrag.isIntersecting;
+      abgleichen();
+    }).observe(heroVideo.closest('.hero'));
+  } else abgleichen();
+  beschriften();
+}
+
 /* ---------- Menü ---------- */
 
 const menu = document.querySelector("[data-menu]");
@@ -547,9 +601,11 @@ function formularSchritte(form, { rechner, pruefen, melden, termin }) {
     text.textContent = i === 0 ? '5 € normal · 10 € bodentief · ab 25 € Auftragswert' : 'Kleine Aufgaben im Alltag · Preis nach Absprache';
     b.append(titel, text);
     b.addEventListener('click', () => {
+      if (gesperrt || aktuell !== 0) return;
       auswahl.value = name;
       auswahl.dispatchEvent(new Event('change', { bubbles: true }));
       pruefen(auswahl, false);
+      naechster();
     });
     karten.append(b);
     return b;
@@ -602,7 +658,7 @@ function formularSchritte(form, { rechner, pruefen, melden, termin }) {
     fortschritt.textContent = `Schritt ${index + 1} von ${schritte.length} · ${schritte[index].kurz}`;
     balken.value = index + 1;
     zurueck.hidden = index === 0;
-    weiter.hidden = index === 6;
+    weiter.hidden = index === 0 || index === 6;
     absenden.hidden = index !== 6;
     weiter.textContent = index === 5 ? (termin() ? 'Zur Übersicht' : 'Ohne Wunschtermin weiter') : 'Weiter';
     if (fokus) {
@@ -1224,7 +1280,7 @@ function volleBewegung(gsap, ScrollTrigger, OUT, INOUT) {
           pinSpacing: false,
         },
       })
-      .to(heroEl.querySelector(".hero__media img"), { scale: breit ? 1.14 : 1.1, ease: "none" }, 0)
+      .to(heroEl.querySelectorAll(".hero__media img, .hero__media video"), { scale: breit ? 1.14 : 1.1, ease: "none" }, 0)
       .to(
         heroEl.querySelector(".hero__stage"),
         { scale: breit ? 0.94 : 0.96, borderRadius: breit ? 40 : 24, ease: "none" },

@@ -51,7 +51,7 @@
       imagesizes="100vw"
       fetchpriority="high"
     />
-    <link rel="stylesheet" href="styles.css?v=20261021-layout" />
+    <link rel="stylesheet" href="styles.css?v=20261025-video" />
     <script>
       document.documentElement.classList.add("js");
       // Sicherheitsnetz: Lädt die Animation nicht, wird nach 3 s alles direkt gezeigt.
@@ -282,7 +282,8 @@
     <main id="main">
       <section class="hero" aria-labelledby="hero-titel">
         <div class="hero__stage">
-          <picture class="hero__media">
+          <div class="hero__media">
+            <picture>
             <source
               media="(min-aspect-ratio: 1/1)"
               srcset="
@@ -302,9 +303,15 @@
               height="2000"
               fetchpriority="high"
               decoding="async"
-              alt="Fensterreinigung: Ein Abzieher zieht eine saubere Bahn durch die eingeseifte Scheibe, dahinter ein Garten mit Holzzaun und Nachbarhäusern."
+              alt=""
             />
           </picture>
+            <video class="hero__video" data-hero-video muted loop playsinline
+              preload="none" poster="hero-quer-1920.webp" aria-hidden="true"
+              tabindex="-1" disablepictureinpicture>
+              <source src="klarglas-nachbarschaft-web-1080p.mp4" type="video/mp4" />
+            </video>
+          </div>
           <div
             class="hero__frost"
             aria-hidden="true"
@@ -318,6 +325,8 @@
           <div class="hero__dim" aria-hidden="true"></div>
         </div>
 
+        <button type="button" class="hero__video-toggle" data-hero-video-toggle
+          aria-label="Hintergrundvideo abspielen" aria-pressed="false" hidden>Video abspielen</button>
         <div class="shell hero__content">
           <div class="hero__copy">
             <h1 class="hero__badge" id="hero-titel" data-hero-in>Fensterreinigung Berlin-Köpenick</h1>
@@ -994,6 +1003,6 @@ Nicht sicher, ob wir zu Ihnen kommen? Fragen Sie einfach unverbindlich an.
     <script src="ScrollTrigger.min.js" defer></script>
     <script src="CustomEase.min.js" defer></script>
     <script src="lenis.min.js" defer></script>
-    <script src="main.js?v=20261021-schritte" defer></script>
+    <script src="main.js?v=20261025-video-auswahl" defer></script>
   </body>
 </html>
